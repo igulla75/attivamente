@@ -1,0 +1,11 @@
+{
+  "name": "AttivaMente – Il laboratorio dei giochi da creare",
+  "short_name": "AttivaMente",
+  "lang": "it",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f8fb",
+  "theme_color": "#1f5fa8",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

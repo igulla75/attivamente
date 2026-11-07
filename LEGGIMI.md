@@ -2,6 +2,33 @@
 
 App web gratuita che accompagna il corso. Funziona su telefono, tablet e computer, si può installare come un'icona e lavora anche senza connessione. Nessun account, nessun dato inviato: tutto resta sul dispositivo.
 
+## Versione 3.15 (7 novembre 2026)
+- Ultimi ritocchi dopo la verifica di ChatGPT sulla 3.14: le eccezioni del filtro delle parole sono un elenco di parole esatte; nel libro anche una tabella lunghissima si divide sulle pagine dopo.
+- Verifica documentata in `VERIFICA-3.15.md` (nei sorgenti).
+
+## Versione 3.14 (7 novembre 2026)
+- Correzioni dopo la verifica di ChatGPT sulla 3.13: il filtro delle parole non esclude più parole innocue (come SCEMPIO o CAZZUOLA) e una parola esclusa non può più formarsi per incrocio; nel libro anche un elenco lunghissimo si divide sulle pagine dopo.
+- Le etichette sugli studi ora dicono che tipo di studi esiste: **Studi controllati**, **Studi preliminari**, **Per analogia**. Toccandole si legge che cosa vogliono dire (anche nella pagina Crea).
+- Verifica documentata in `VERIFICA-3.14.md` (nei sorgenti).
+
+## Versione 3.13 (7 novembre 2026)
+- **Collaudo con sette persone simulate** (dal matematico alla signora di 78 anni) e con il rapporto di ChatGPT: corretti tutti i problemi gravi e quasi tutti i medi.
+- **Telefono e tablet**: griglia e tasti dei numeri si vedono insieme, in verticale e in orizzontale; lo schermo intero comprende i comandi.
+- **La partita lasciata a metà riprende** anche dopo aver ricaricato la pagina.
+- **Dizionario ripulito** da pezzi di parole e da parole delicate; nessuna parola ripetuta nello stesso schema.
+- **Libro**: nessuna pagina tagliata (i giochi lunghi continuano sulla pagina dopo), indice con i numeri di pagina.
+- Livelli più distinti in Sudoku, Kakuro e Problemi di matto; esempi delle regole corretti; Tangram e Pentamini con la tastiera; "Con calma" senza conti alla rovescia.
+- Verifica documentata in `VERIFICA-3.13.md` (nei sorgenti).
+
+## Versione 3.12 (7 novembre 2026)
+- **Gioca, impara, crea**: per ognuno dei 22 giochi un percorso in quattro tappe (gioca, impara le regole, come si costruisce, crea il tuo). Si crea partendo da una struttura pronta: la partita appena giocata o una nuova. Pulsante **Crealo tu** in ogni partita.
+- **22 piccoli corsi** su come si costruisce ogni gioco, con esempi e figure.
+- **Esporta e condividi**: un riquadro in ogni strumento spiega tutti i modi di portare fuori un gioco.
+- **Crea un libro** con i giochi che hai creato tu, con le pagine da ritagliare e la pagina del copyright; avvisi per Amazon KDP. Nella guida: come creare, regalare e vendere un libretto, con le regole di KDP verificate.
+- **Enigmi celebri**: dieci enigmi famosi risolti e spiegati, e sette problemi ancora aperti, con piccoli laboratori.
+- **Telefono**: menu compatto, pulsanti più grandi, ingrandimento in un solo pulsante, pulsanti inattivi più leggibili.
+- Verifica documentata in `VERIFICA-3.12.md` (nei sorgenti).
+
 ## Versione 3.11 (4 novembre 2026)
 - **Crittografato**: corretta la causa dei rari casi in cui la partita non si creava (schemi troppo difficili da riempire, pochi tentativi, troppo poche lettere date). Ora ogni livello si crea in meno di 4 secondi, con la soluzione unica verificata.
 - **Parole a incastro** molto più veloci ai livelli alti (al massimo circa 4 secondi). **Hexadoku**: niente più partite mancanti con alcuni semi; Esperto più rapido.
@@ -65,7 +92,7 @@ App web gratuita che accompagna il corso. Funziona su telefono, tablet e compute
 
 ## Versione 3.0 (1° novembre 2026) – versione completa
 Venticinque strumenti. Novità rispetto alla 2.1:
-- **Come si usa**: guida completa dentro l'app (creare, salvare, stampare e fare un PDF, condividere, installare sul telefono, accessibilità, livelli di prova, giochi di squadra, privacy, domande frequenti)
+- **Come si usa**: guida completa dentro l'app (creare, salvare, stampare e fare un PDF, condividere, installare sul telefono, accessibilità, che cosa dicono gli studi, giochi di squadra, privacy, domande frequenti)
 - **Ponti (Hashi)**: disegni isole e ponti, l'app scrive i numeri e verifica la soluzione unica; schemi proposti fino a 13×13; si gioca anche sullo schermo
 - **Cruciverba crittografato**: numeri al posto delle lettere, dal proprio cruciverba a schema o da uno nuovo creato con il dizionario; lettere date scelte al minimo con soluzione unica verificata; si gioca anche sullo schermo
 

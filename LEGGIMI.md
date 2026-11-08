@@ -2,6 +2,14 @@
 
 App web gratuita che accompagna il corso. Funziona su telefono, tablet e computer, si può installare come un'icona e lavora anche senza connessione. Nessun account, nessun dato inviato: tutto resta sul dispositivo.
 
+## Versione 3.23 (8 novembre 2026)
+- Frase sui diritti delle opere dei musei resa più precisa, come chiesto dalla verifica indipendente. Verifica in `VERIFICA-3.23.md` (nei sorgenti).
+
+## Versione 3.22 (8 novembre 2026)
+- **Colorare un’opera d’arte, passo passo**: al posto delle pagine sulle licenze ci sono i link diretti alle raccolte di opere libere di tre musei (Metropolitan di New York, Art Institute of Chicago, Cleveland Museum of Art) e i passi da seguire: scegli l’opera, scaricala, aprila con il nuovo pulsante «Scegli l’immagine», colorala. Lo trovi in Crea (Colorare con i numeri e Copia con la griglia), nella pagina Arte e benessere e nella guida; dalla pagina Inizia e dalla pagina Arte un pulsante porta subito lì.
+- Quando l’immagine è pronta, l’app dice quante zone e quanti colori ha e che cosa fare dopo.
+- Verifica in `VERIFICA-3.22.md` (nei sorgenti).
+
 ## Versione 3.21 (8 novembre 2026)
 - Corretto il collegamento alla National Gallery of Art di Washington (nuovo indirizzo della pagina ufficiale) e resa più prudente la frase sui musei nella pagina Arte e benessere. Verifica in `VERIFICA-3.21.md` (nei sorgenti).
 

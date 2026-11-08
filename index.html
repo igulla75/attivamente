@@ -239,6 +239,9 @@ input.wide{min-height:var(--hit);padding:0 12px;border:1px solid var(--rule);bor
 .colsw.done{opacity:.5}
 .colsw[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:1px}
 .colpad.small .colsw{min-width:44px;min-height:44px}
+.colpad.many{max-height:min(46vh,430px);overflow-y:auto;gap:4px;padding:2px;overscroll-behavior:contain}
+.colpad.many .colsw{min-width:48px;padding:0 4px;gap:4px}
+.colpad.many .colsw .sw{width:20px;height:20px}
 @media screen and (max-width:900px) and (orientation:portrait){.bench.game .side .padsym.colpad{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;-webkit-overflow-scrolling:touch}.bench.game .side .padsym.colpad .colsw{flex:none}}
 .collegend{list-style:none;padding:0;margin:8px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px 14px}
 .collegend li{display:flex;align-items:center;gap:6px}
@@ -266,6 +269,7 @@ input.wide{min-height:var(--hit);padding:0 12px;border:1px solid var(--rule);bor
 .sheet.zoomed .titles,.sheet.zoomed .zoombar{position:sticky;left:0;width:var(--sw);z-index:2;background:var(--card)}
 .sheet.zoomed .zoombar{top:0;padding:4px 0}
 .sheet.zoomed .board,.sheet.zoomed .boardfree{max-width:none;width:var(--zw);min-width:var(--zw)}
+.bench.game .sheet.zoomed #work svg,.sheet.zoomed #work svg{max-height:none}
 .sheet.panmode .board,.sheet.panmode .boardfree{touch-action:auto}
 .sheet.panmode svg{pointer-events:none}
 .sheet:fullscreen{max-height:none;overflow:auto;background:var(--card)}
@@ -1396,7 +1400,7 @@ var ColoraCore = (function(){
   function rng(seed){ var s=((Math.imul((seed>>>0)||1, 2654435761)>>>0) ^ 0x9E3779B9)>>>0 || 1, f=function(){ s^=s<<13; s>>>=0; s^=s>>>17; s^=s<<5; s>>>=0; return s/4294967296; }; for(var i=0;i<8;i++) f(); return f; }
   var TAU=Math.PI*2;
   // livelli: colori, raggio minimo (in pixel della griglia) della zona per scriverci il numero
-  var LEVELS=[ { k:8, rmin:5.2 }, { k:12, rmin:4.2 }, { k:18, rmin:3.4 }, { k:24, rmin:2.8 }, { k:30, rmin:2.3 } ];
+  var LEVELS=[ { k:8, rmin:5.2 }, { k:12, rmin:4.2 }, { k:18, rmin:3.4 }, { k:24, rmin:2.8 }, { k:30, rmin:2.3 }, { k:200, rmin:1.5 } ];
   var THEMES=['mandala','vetrata','paesaggio','fiori','geometrie'];
   var THEME_NAMES={ mandala:'Mandala', vetrata:'Vetrata', paesaggio:'Paesaggio', fiori:'Fiori', geometrie:'Geometrie', foto:'Dalla tua foto' };
 
@@ -1512,7 +1516,7 @@ var ColoraCore = (function(){
       S.forEach(function(s, k){ if(s[3]>0) C[k]=[s[0]/s[3], s[1]/s[3], s[2]/s[3]]; });
       if(!moved && it>0) break; }
     // colori troppo simili si fondono (differenza minima percepibile, in unità OKLab×100)
-    var MIN=minDE||9; for(var guard=0; guard<40; guard++){ var ba=-1, bb=-1, bd2=1e9; for(var a=0;a<C.length;a++) for(var b=a+1;b<C.length;b++){ var e2=Math.hypot(C[a][0]-C[b][0],C[a][1]-C[b][1],C[a][2]-C[b][2])*100; if(e2<bd2){ bd2=e2; ba=a; bb=b; } }
+    var MIN=minDE||9; for(var guard=0; guard<Math.max(40, K); guard++){ var ba=-1, bb=-1, bd2=1e9; for(var a=0;a<C.length;a++) for(var b=a+1;b<C.length;b++){ var e2=Math.hypot(C[a][0]-C[b][0],C[a][1]-C[b][1],C[a][2]-C[b][2])*100; if(e2<bd2){ bd2=e2; ba=a; bb=b; } }
       if(ba<0 || bd2>=MIN) break; var wa=0, wb=0; for(i=0;i<n;i++){ if(asg[i]===ba) wa+=weights[i]; if(asg[i]===bb) wb+=weights[i]; }
       C[ba]=[(C[ba][0]*wa+C[bb][0]*wb)/(wa+wb||1), (C[ba][1]*wa+C[bb][1]*wb)/(wa+wb||1), (C[ba][2]*wa+C[bb][2]*wb)/(wa+wb||1)]; C.splice(bb,1);
       for(i=0;i<n;i++){ if(asg[i]===bb) asg[i]=ba; else if(asg[i]>bb) asg[i]--; } }
@@ -1689,8 +1693,9 @@ var ColoraCore = (function(){
   /* ---------- da una foto ---------- */
   // rgba: array di byte (r,g,b,a…) già rimpicciolito (lato lungo circa 200 pixel)
   // foto e opere d'arte: per livello, lato della griglia di lavoro, colori e altezza minima del numero stampato su A4 (mm)
-  var PHOTO={ side:[240,320,400,460,520], k:[8,12,18,24,30], mm:[5,3.8,2.8,2.1,1.6], de:[8,6,5,4,3.5] };
-  function fromPixels(rgba, w, h, K, L, seed, opt){ L=Math.max(0,Math.min(4,L|0)); opt=opt||{}; K=K||PHOTO.k[L];
+  // l'ultimo livello (Maestro, solo per foto e opere d'arte) arriva a 200 colori e a migliaia di zone: si colora sullo schermo, con l'ingrandimento
+  var PHOTO={ side:[240,320,400,460,520,1000], k:[8,12,18,24,30,200], mm:[5,3.8,2.8,2.1,1.6,0.6], de:[8,6,5,4,3.5,1.8] };
+  function fromPixels(rgba, w, h, K, L, seed, opt){ L=Math.max(0,Math.min(5,L|0)); opt=opt||{}; K=K||PHOTO.k[L]; var big=L>=5 && !opt.side;
     var n0=w*h, i, j, x, y;
     // 1. in OKLab, su fondo bianco
     var A0=new Float32Array(n0*3); for(i=0;i<n0;i++){ var al=rgba[i*4+3]/255, lb=toLab([(rgba[i*4]/255)*al+(1-al), (rgba[i*4+1]/255)*al+(1-al), (rgba[i*4+2]/255)*al+(1-al)]); A0[i*3]=lb[0]; A0[i*3+1]=lb[1]; A0[i*3+2]=lb[2]; }
@@ -1700,7 +1705,7 @@ var ColoraCore = (function(){
       for(var yy=y0;yy<y1;yy++) for(var xx=x0;xx<x1;xx++){ var q=(yy*w+xx)*3; sl+=A0[q]; sa+=A0[q+1]; sb+=A0[q+2]; c++; } var o=(y*tw+x)*3; A[o]=sl/c; A[o+1]=sa/c; A[o+2]=sb/c; } }
     // 3. filtro bilaterale: leviga le zone uniformi e lascia netti i contorni
     var sc=opt.bil||0.05, ss=1.7, R=2, SW=[], ic=1/(2*sc*sc); for(var sy=-R;sy<=R;sy++) for(var sx_=-R;sx_<=R;sx_++) SW.push(Math.exp(-(sx_*sx_+sy*sy)/(2*ss*ss)));
-    for(var pass=0; pass<(opt.passes||3); pass++){ var B=new Float32Array(n*3);
+    for(var pass=0; pass<(opt.passes||(big?1:3)); pass++){ var B=new Float32Array(n*3);
       for(y=0;y<th;y++) for(x=0;x<tw;x++){ var p0=(y*tw+x)*3, l0=A[p0], a0=A[p0+1], b0=A[p0+2], wl=0, ws=0, tl=0, ta=0, tb=0;
         for(var dy=-R;dy<=R;dy++){ var yq=y+dy; if(yq<0||yq>=th) continue; for(var dx=-R;dx<=R;dx++){ var xq=x+dx; if(xq<0||xq>=tw) continue; var q2=(yq*tw+xq)*3, e1=A[q2]-l0, e2=A[q2+1]-a0, e3=A[q2+2]-b0, cd=(e1*e1+e2*e2+e3*e3)*ic;
           if(cd>9) continue; var ww=SW[(dy+R)*(2*R+1)+dx+R]*Math.exp(-cd); ws+=ww; tl+=A[q2]*ww; ta+=A[q2+1]*ww; tb+=A[q2+2]*ww; } }
@@ -1708,16 +1713,16 @@ var ColoraCore = (function(){
       A=B; }
     // 4. colori un po' più vivi: la media dei pixel li spegne
     var chs=[]; for(i=0;i<n;i+=Math.max(1,Math.floor(n/4000))) chs.push(Math.hypot(A[i*3+1],A[i*3+2])); chs.sort(function(a,b){ return a-b; });
-    var medC=chs[Math.floor(chs.length*0.6)]||0.05, sat=opt.sat||Math.max(1.1, Math.min(1.7, 0.085/Math.max(medC,0.01)));
+    var medC=chs[Math.floor(chs.length*0.6)]||0.05, sat=opt.sat||Math.max(big?1.03:1.1, Math.min(big?1.25:1.7, 0.085/Math.max(medC,0.01)));
     for(i=0;i<n;i++){ A[i*3+1]*=sat; A[i*3+2]*=sat; }
     // 5. tavolozza: k-medie su un campione di pixel
-    var step=Math.max(1, Math.floor(n/9000)), sample=[], wts=[]; for(i=0;i<n;i+=step){ sample.push(fromLab([A[i*3],A[i*3+1],A[i*3+2]])); wts.push(1); }
+    var step=Math.max(1, Math.floor(n/(K>40?40000:9000))), sample=[], wts=[]; for(i=0;i<n;i+=step){ sample.push(fromLab([A[i*3],A[i*3+1],A[i*3+2]])); wts.push(1); }
     var qz=quantize(sample, wts, K, seed||11, opt.de||PHOTO.de[L]), PL=qz.pal.map(function(hx){ return toLab(unhex(hx)); });
     var idx=new Int32Array(n); for(i=0;i<n;i++){ var bj=0, bd=1e9; var a0_=A[i*3], a1_=A[i*3+1], a2_=A[i*3+2]; for(j=0;j<PL.length;j++){ var pj=PL[j], e0=a0_-pj[0], e1=a1_-pj[1], e2=a2_-pj[2], e=e0*e0+e1*e1+e2*e2; if(e<bd){ bd=e; bj=j; } } idx[i]=bj; }
     // 6. filtro della moda 3×3, due volte: toglie i puntini isolati
-    var cnt=new Int32Array(64); for(pass=0; pass<2; pass++){ var nx=new Int32Array(n); for(y=0;y<th;y++) for(x=0;x<tw;x++){ var me=idx[y*tw+x], best=me, bc=0, v; for(dy=-1;dy<=1;dy++) for(dx=-1;dx<=1;dx++){ xx=x+dx; yy=y+dy; if(xx<0||yy<0||xx>=tw||yy>=th) continue; v=idx[yy*tw+xx]; cnt[v]++; if(cnt[v]>bc || (cnt[v]===bc && v===me)){ bc=cnt[v]; best=v; } } for(dy=-1;dy<=1;dy++) for(dx=-1;dx<=1;dx++){ xx=x+dx; yy=y+dy; if(xx<0||yy<0||xx>=tw||yy>=th) continue; cnt[idx[yy*tw+xx]]=0; } nx[y*tw+x]=best; } idx=nx; }
+    var cnt=new Int32Array(Math.max(64, qz.pal.length+1)); for(pass=0; pass<2; pass++){ var nx=new Int32Array(n); for(y=0;y<th;y++) for(x=0;x<tw;x++){ var me=idx[y*tw+x], best=me, bc=0, v; for(dy=-1;dy<=1;dy++) for(dx=-1;dx<=1;dx++){ xx=x+dx; yy=y+dy; if(xx<0||yy<0||xx>=tw||yy>=th) continue; v=idx[yy*tw+xx]; cnt[v]++; if(cnt[v]>bc || (cnt[v]===bc && v===me)){ bc=cnt[v]; best=v; } } for(dy=-1;dy<=1;dy++) for(dx=-1;dx<=1;dx++){ xx=x+dx; yy=y+dy; if(xx<0||yy<0||xx>=tw||yy>=th) continue; cnt[idx[yy*tw+xx]]=0; } nx[y*tw+x]=best; } idx=nx; }
     // 7. zone connesse; quelle dove il numero non starebbe si uniscono alla vicina di colore più simile
-    var cols=qz.pal.map(unhex), mmMin=opt.mm||PHOTO.mm[L], rmin=Math.max(1.2, mmMin*tw/225);
+    var cols=qz.pal.map(unhex), mmMin=opt.mm||PHOTO.mm[L], rmin=Math.max(big?2:1.2, mmMin*tw/225);
     var sp=splitComponents(tw, th, idx, cols), mg=mergeSmall(tw, th, sp.lab, sp.cols, rmin, 1);
     var palIdx={}; qz.pal.forEach(function(hx, k){ palIdx[hex(unhex(hx))]=k; });
     var used={}, rc=mg.cols.map(function(c){ var k=palIdx[hex(c)]; used[k]=1; return k; }), keep=Object.keys(used).map(Number).sort(function(a,b){ return a-b; }), re={}; keep.forEach(function(k,i2){ re[k]=i2; });
@@ -1731,7 +1736,7 @@ var ColoraCore = (function(){
   function chaikinClosed(p, it){ for(var k=0;k<it;k++){ var q=[]; for(var i=0;i<p.length;i++){ var a=p[i], b=p[(i+1)%p.length]; q.push([a[0]*0.75+b[0]*0.25, a[1]*0.75+b[1]*0.25],[a[0]*0.25+b[0]*0.75, a[1]*0.25+b[1]*0.75]); } p=q; } return p; }
   function geometry(d, unit){ var w=d.w, h=d.h, lab=decode(d.rle, w, h), U=unit||(640/Math.max(w,h)), nreg=d.rc.length;
     // a griglie fini i gradini dei pixel si vedono come linee tremolanti: si semplifica di più e si arrotonda una volta in più
-    var EPS=U*Math.max(0.55, Math.max(w,h)/450), CHK=Math.max(w,h)>300?3:2;
+    var EPS=U*(d.level>=5 ? 0.55 : Math.max(0.55, Math.max(w,h)/450)), CHK=Math.max(w,h)>300?3:2; // al livello Maestro le zone sono minuscole: contorni semplificati poco
     function L(x, y){ return (x<0||y<0||x>=w||y>=h) ? -1 : lab[y*w+x]; }
     // lati di confine: orizzontali H[y][x] tra (x,y-1) e (x,y); verticali V[y][x] tra (x-1,y) e (x,y)
     var CW=w+1, deg=new Uint8Array((w+1)*(h+1));
@@ -1778,7 +1783,7 @@ var ColoraCore = (function(){
     // posto e grandezza dei numeri: il punto più lontano dai bordi della zona
     var D=distField(w,h,lab), best=new Float32Array(nreg), bx=new Float32Array(nreg), by=new Float32Array(nreg), area=new Int32Array(nreg);
     for(y=0;y<h;y++) for(x=0;x<w;x++){ var i=y*w+x, rr=lab[i]; area[rr]++; if(D[i]>best[rr]){ best[rr]=D[i]; bx[rr]=x+0.5; by[rr]=y+0.5; } }
-    var labels=[]; for(var k=0;k<nreg;k++) labels.push({ x:bx[k]*U, y:by[k]*U, fs:Math.max(5.5, Math.min(26, best[k]*U*1.25)), r:best[k], a:area[k] });
+    var labels=[]; for(var k=0;k<nreg;k++) labels.push({ x:bx[k]*U, y:by[k]*U, fs:Math.max(d.level>=5?1.2:5.5, Math.min(26, best[k]*U*1.25)), r:best[k], a:area[k] });
     return { W:w*U, H:h*U, U:U, paths:paths, lines:lines, frame:frame, labels:labels, nreg:nreg }; }
 
   // statistiche per il controllo della parte Crea
@@ -1864,9 +1869,9 @@ var state = load();
 state.works = state.works || [];
 state.settings = state.settings || { size:'normal', hc:false, tremor:false, calm:false, steps:true, voice:true, profile:'standard' };
 state.drafts = state.drafts || {};
-function save(){ try { localStorage.setItem(STORE, JSON.stringify(state)); } catch(e){} }
+function save(){ try { localStorage.setItem(STORE, JSON.stringify(state)); } catch(e){ var now=Date.now(); if(!save._w || now-save._w>60000){ save._w=now; try{ toast('La memoria dell’app su questo dispositivo è piena: le ultime modifiche non sono salvate. Elimina qualche lavoro in «I miei lavori» (i disegni Maestro occupano molto).', 10000); }catch(e2){} } } }
 
-function toast(t){ var el=document.getElementById('toast'); el.textContent=t; el.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(function(){ el.hidden=true; }, 2600); }
+function toast(t, ms){ var el=document.getElementById('toast'); el.textContent=t; el.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(function(){ el.hidden=true; }, ms||2600); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
@@ -2050,7 +2055,7 @@ function renderHome(){
     });
     html += '</div></section>';
   });
-  html += '</div><p class="note">Le etichette (studi controllati, studi preliminari, per analogia) dicono che tipo di studi esiste oggi su ciascun tipo di gioco. Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.24.</p>';
+  html += '</div><p class="note">Le etichette (studi controllati, studi preliminari, per analogia) dicono che tipo di studi esiste oggi su ciascun tipo di gioco. Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.25.</p>';
   app.innerHTML = html;
 }
 
@@ -8022,8 +8027,10 @@ var ColoraView=(function(){
       if(o.sol) fill=d.pal[d.rc[i]];
       else if(o.play){ if(mode==='free'){ if(d.ff && d.ff[i]>=0) fill=FREE[d.ff[i]]; } else if(d.f && d.f[i]>=0) fill=colOf(d, d.f[i]); else if(d.hl!==false && d.rc[i]===d.sel) fill=HL; }
       s+='<path data-r="'+i+'" d="'+g.paths[i]+'" fill="'+fill+'" fill-rule="evenodd"/>'; }
-    s+='<path d="'+g.lines+'" fill="none" stroke="'+(o.print?'#3a3a3a':'#555')+'" stroke-width="'+(o.print?thin*0.9:thin)+'" stroke-linejoin="round" pointer-events="none"/>';
-    s+='<path d="'+g.frame+'" fill="none" stroke="#3a3a3a" stroke-width="1.6" pointer-events="none"/>';
+    // al livello Maestro, sullo schermo, le linee restano sottili anche ingrandendo
+    var fine=d.level>=5 && !o.print;
+    s+='<path d="'+g.lines+'" fill="none" stroke="'+(o.print?'#3a3a3a':'#555')+'" stroke-width="'+(fine?1:o.print?thin*0.9:thin)+'"'+(fine?' vector-effect="non-scaling-stroke"':'')+' stroke-linejoin="round" pointer-events="none"/>';
+    s+='<path d="'+g.frame+'" fill="none" stroke="#3a3a3a" stroke-width="'+1.6+'"'+(fine?' vector-effect="non-scaling-stroke"':'')+' pointer-events="none"/>';
     if(nums){ for(var j=0;j<g.nreg;j++){ if(o.play && d.f && d.f[j]>=0) continue; var L=g.labels[j], on=o.play && d.hl!==false && d.rc[j]===d.sel;
         s+='<text x="'+L.x.toFixed(1)+'" y="'+L.y.toFixed(1)+'" font-size="'+L.fs.toFixed(1)+'" text-anchor="middle" dominant-baseline="central" font-family="'+FONT+'" fill="'+(on?'#000':o.print?'#444':'#6b6b6b')+'"'+(on?' font-weight="700"':'')+' pointer-events="none">'+(d.rc[j]+1)+'</text>'; } }
     return s+'</svg>'; }
@@ -8046,7 +8053,7 @@ var ColoraView=(function(){
       '<li><b>Apri un museo</b> (si apre in una pagina nuova):'+museums()+'</li>'+
       '<li><b>Scegli un’opera</b> segnata «Open Access» o «Public domain» e <b>scaricala</b> con il pulsante «Download». Sul telefono puoi anche tenere il dito sull’immagine e scegliere «Scarica immagine». Se ti chiede il formato, scegli JPG.</li>'+
       '<li><b>Torna qui</b> e premi «Scegli l’immagine»: prendila dalla cartella Download o dalle Foto. '+made+'<br><button type="button" class="btn primary" data-pick="'+(copia?'cp-photo':'co-photo')+'">Scegli l’immagine</button></li></ol>'+
-      '<details class="imgsrc"><summary>Consigli: quali opere vengono meglio</summary><p class="evidence">I siti sono in inglese: cerca con parole inglesi, per esempio '+WORDS+'. Vengono meglio soggetti grandi, contorni netti e pochi colori decisi: stampe giapponesi, illustrazioni di fiori e animali, manifesti antichi. I quadri molto scuri o pieni di piccoli particolari vengono semplificati molto: ai livelli Difficile ed Esperto si conservano più particolari.</p></details>'+RIGHTS+'</div>';
+      '<details class="imgsrc"><summary>Consigli: quali opere vengono meglio</summary><p class="evidence">I siti sono in inglese: cerca con parole inglesi, per esempio '+WORDS+'. Vengono meglio soggetti grandi, contorni netti e pochi colori decisi: stampe giapponesi, illustrazioni di fiori e animali, manifesti antichi. I quadri molto scuri o pieni di piccoli particolari vengono semplificati molto ai livelli bassi: per conservarne di più scegli Esperto o, per i dipinti ricchi di dettagli, Maestro (fino a 200 colori, da colorare sullo schermo ingrandendo).</p></details>'+RIGHTS+'</div>';
     return '<div class="howto"><ol class="steps5">'+
       '<li><b>Apri un museo</b> tra questi (si apre in una pagina nuova):'+museums()+'</li>'+
       '<li><b>Cerca e scegli un’opera.</b> I siti sono in inglese: cerca con parole inglesi, per esempio '+WORDS+'. Vengono meglio soggetti grandi, contorni netti e pochi colori decisi: stampe giapponesi, illustrazioni di fiori e animali, manifesti antichi. I quadri pieni di piccoli particolari vengono semplificati: ai livelli Difficile ed Esperto se ne conservano di più. Controlla che l’opera sia segnata «Open Access» o «Public domain».</li>'+
@@ -8074,7 +8081,7 @@ TOOLS.colora={ id:'colora', title:'Colorare con i numeri', defTitle:'Il mio dise
   solutionTitle:'Il disegno colorato',
   init:function(){ if(!TOOLS.colora._init) TOOLS.colora._init=ColoraCore.generate('mandala', 1, 4242); var d=clone(TOOLS.colora._init); d.view='col'; return d; },
   side:function(ctx){ var d=ctx.d; return '<div class="panel"><h3>Il disegno</h3><p class="label">Tema</p>'+seg('co-th', ColoraCore.THEMES.map(function(t){ return [t, ColoraCore.THEME_NAMES[t]]; }), d.theme)+
-      '<p class="label">Livello</p>'+seg('co-lv', [[0,'Principiante'],[1,'Facile'],[2,'Medio'],[3,'Difficile'],[4,'Esperto']], d.level)+'<p class="evidence">Dal Principiante (fino a 8 colori, zone grandi) all’Esperto (fino a 30 colori e molti particolari, con numeri piccoli: meglio sullo schermo con l’ingrandimento, o stampato su A3). Quanti colori servono davvero dipende dal disegno.</p>'+
+      '<p class="label">Livello</p>'+seg('co-lv', [[0,'Principiante'],[1,'Facile'],[2,'Medio'],[3,'Difficile'],[4,'Esperto'],[5,'Maestro']], d.level)+'<p class="evidence">Dal Principiante (fino a 8 colori, zone grandi) all’Esperto (fino a 30 colori e molti particolari, con numeri piccoli: meglio sullo schermo con l’ingrandimento, o stampato su A3). Il livello <b>Maestro</b> è solo per le opere d’arte e le foto: fino a 200 colori e migliaia di zone, da colorare sullo schermo ingrandendo. Quanti colori servono davvero dipende dal disegno.</p>'+
       '<div class="row"><button class="btn primary" id="co-new">Disegno nuovo</button><button class="btn" id="co-pal">Altri colori</button></div>'+
       '<div id="co-msg" aria-live="polite"></div></div>'+
       '<div class="panel" id="co-img"><h3>Da un’opera d’arte o da una tua foto</h3><p class="evidence">Scarica un’opera da un museo (o usa una tua foto): l’app la trasforma in un disegno da colorare. L’immagine resta in questo dispositivo.</p><label class="btn primary filebtn">Scegli l’immagine<input type="file" id="co-photo" class="sr-only" accept="image/*"></label><div id="co-imsg" aria-live="polite"></div>'+ColoraView.sources(true, 'colora')+'</div>'+
@@ -8088,16 +8095,16 @@ TOOLS.colora={ id:'colora', title:'Colorare con i numeri', defTitle:'Il mio dise
       var done=function(x){ if(m) m.innerHTML=''; if(!x) return; ctx.change(function(){ var keep={ title:d.title, dedica:d.dedica, workId:d.workId, view:d.view }; Object.keys(d).forEach(function(k){ if(!(k in {title:1,dedica:1,workId:1})) delete d[k]; }); Object.assign(d, x); d.view=keep.view||'col'; }); TOOLS.colora.syncSide(ctx); };
       (typeof WG!=='undefined' ? WG.call('ColoraCore.generate', [theme, L, seed]) : Promise.reject()).catch(function(){ return ColoraCore.generate(theme, L, seed); }).then(done, function(){ if(m) m.innerHTML=warnMsg('Non sono riuscita a preparare il disegno.','Riprova.'); }); }
     onSeg('co-th', function(v){ make(v, d.level, Date.now()%100000); });
-    onSeg('co-lv', function(v){ if(d.theme==='foto'){ if(ctx.ui.photo) fromPhoto(ctx.ui.photo, +v, 'co-msg'); else { $('co-msg').innerHTML=infoMsg('Per cambiare il livello di una foto, sceglila di nuovo.','La foto non viene conservata, per rispetto della riservatezza.'); setSeg('co-lv', d.level); } return; } make(d.theme, +v, Date.now()%100000); });
+    onSeg('co-lv', function(v){ ctx.ui.wantL=null; if(+v===5 && d.theme!=='foto'){ if(ctx.ui.photo){ fromPhoto(ctx.ui.photo, 5, 'co-msg'); return; } ctx.ui.wantL=5; $('co-msg').innerHTML=infoMsg('Il livello Maestro è per le opere d’arte e le foto.','Scegli l’immagine qui sotto, in «Da un’opera d’arte o da una tua foto»: diventerà un disegno fino a 200 colori.'); var pi=$('co-img'); if(pi && pi.scrollIntoView) pi.scrollIntoView({ block:'start' }); return; } if(d.theme==='foto'){ if(ctx.ui.photo) fromPhoto(ctx.ui.photo, +v, 'co-msg'); else { $('co-msg').innerHTML=infoMsg('Per cambiare il livello di una foto, sceglila di nuovo.','La foto non viene conservata, per rispetto della riservatezza.'); setSeg('co-lv', d.level); } return; } make(d.theme, +v, Date.now()%100000); });
     onSeg('co-view', function(v){ ctx.quiet(function(){ d.view=v; }); });
     $('co-new').onclick=function(){ if(d.theme==='foto'){ $('co-msg').innerHTML=infoMsg('Questo disegno viene da una foto.','Scegli un tema per un disegno nuovo, oppure un’altra foto.'); return; } make(d.theme, d.level, Date.now()%100000); };
     $('co-pal').onclick=function(){ ctx.change(function(){ d.pal=ColoraCore.repaint(d, Date.now()%100000); }); };
-    function fromPhoto(px, L, box){ box=box||'co-imsg'; var m=$(box); m.innerHTML='<div class="note waiting" role="status"><span class="spin" aria-hidden="true"></span> Trasformo la foto in un disegno da colorare… può volerci qualche secondo.</div>';
+    function fromPhoto(px, L, box){ box=box||'co-imsg'; var m=$(box); m.innerHTML='<div class="note waiting" role="status"><span class="spin" aria-hidden="true"></span> Trasformo la foto in un disegno da colorare… '+(L>=5?'al livello Maestro può volerci fino a un minuto.':'può volerci qualche secondo.')+'</div>';
       var args=[px.data, px.w, px.h, 0, L, 7];
       (typeof WG!=='undefined' ? WG.call('ColoraCore.fromPixels', args) : Promise.reject()).catch(function(){ return ColoraCore.fromPixels.apply(null, args); }).then(function(x){ m.innerHTML=''; ctx.change(function(){ ['theme','level','w','h','rle','rc','pal','seed','f','ff','my','sel','fsel','mode','hl'].forEach(function(k){ delete d[k]; }); Object.assign(d, x); if(!d.title || d.title===TOOLS.colora.defTitle) d.title='La mia foto da colorare'; }); TOOLS.colora.syncSide(ctx);
-        var mm=$(box); if(mm) mm.innerHTML=infoMsg('Fatto: l’immagine è diventata un disegno con '+d.rc.length+' zone e '+d.pal.length+' colori.', (d.level>=3?'':'Se ti sembra troppo semplice, scegli un livello più alto (Difficile o Esperto). ')+'Poi premi «Colora sullo schermo», oppure Stampa.'); if(mm && mm.scrollIntoView) mm.scrollIntoView({ block:'nearest' }); }, function(){ m.innerHTML=warnMsg('Non sono riuscita a leggere la foto.','Prova con un’altra immagine (JPG o PNG).'); }); }
+        var mm=$(box); if(mm) mm.innerHTML=infoMsg('Fatto: l’immagine è diventata un disegno con '+d.rc.length+' zone e '+d.pal.length+' colori.', d.level>=5?'Con così tanti particolari si colora sullo schermo: premi «Colora sullo schermo» e usa «Ingrandisci o sposta». Stampato, anche su A3, i numeri sono minuscoli. Molti colori si somigliano: segui i numeri.':(d.level>=3?'Vuoi ancora più particolari? Prova il livello Maestro, fino a 200 colori. ':'Se ti sembra troppo semplice, scegli un livello più alto (Difficile, Esperto o Maestro). ')+'Poi premi «Colora sullo schermo», oppure Stampa.'); if(mm && mm.scrollIntoView) mm.scrollIntoView({ block:'nearest' }); }, function(){ m.innerHTML=warnMsg('Non sono riuscita a leggere la foto.','Prova con un’altra immagine (JPG o PNG).'); }); }
     $('co-photo').addEventListener('change', function(){ var f=this.files && this.files[0]; if(!f) return; $('co-imsg').innerHTML='<div class="note waiting" role="status"><span class="spin" aria-hidden="true"></span> Apro l’immagine…</div>';
-      ColoraView.loadPixels(f, 1040, function(px){ ctx.ui.photo=px; fromPhoto(px, d.level==null?2:d.level); }, function(){ $('co-imsg').innerHTML=warnMsg('Questo file non si apre come immagine.','Prova con una foto JPG o PNG.'); }); });
+      ColoraView.loadPixels(f, 1040, function(px){ ctx.ui.photo=px; fromPhoto(px, ctx.ui.wantL!=null?ctx.ui.wantL:(d.level==null?2:d.level)); ctx.ui.wantL=null; }, function(){ $('co-imsg').innerHTML=warnMsg('Questo file non si apre come immagine.','Prova con una foto JPG o PNG.'); }); });
     $('co-free').onchange=function(){ var c=this.checked; ctx.change(function(){ d.freeprint=c; }); };
     $('co-play').onclick=function(){ var data={ theme:d.theme, level:d.level, w:d.w, h:d.h, rle:d.rle, rc:d.rc, pal:d.pal, seed:d.seed, mode:d.freeprint?'free':'num', title:d.title };
       Share.encode(data).then(function(p){ location.hash='#gioca=colora.'+p; }); };
@@ -8111,8 +8118,9 @@ TOOLS.colora={ id:'colora', title:'Colorare con i numeri', defTitle:'Il mio dise
   check:function(ctx){ var d=ctx.d, st=ColoraCore.stats(d), g=ColoraView.geom(d), out='';
     // grandezza del numero più piccolo su un foglio A4 (il disegno largo circa 18 cm)
     var mm=Math.min.apply(null, g.labels.map(function(l){ return l.fs; }))*180/g.W;
-    out+= mm>=2.2 ? okMsg('I numeri si leggono.','Il numero più piccolo, stampato su A4, è alto circa '+mm.toFixed(1).replace('.',',')+' mm.') : mm>=1.5 ? infoMsg('Molti particolari: i numeri più piccoli sono piccoli.','Stampato su A4, il più piccolo è alto circa '+mm.toFixed(1).replace('.',',')+' mm: si legge da vicino. Sullo schermo usa «Ingrandisci o sposta»; per numeri più grandi scegli un livello più basso o stampa su A3.') : warnMsg('Alcuni numeri sono molto piccoli.','Stampato su A4, il più piccolo è alto circa '+mm.toFixed(1).replace('.',',')+' mm: scegli un livello più basso o un formato più grande.');
-    if(st.close.length) out+=warnMsg('Ci sono colori molto simili tra loro.', st.close.map(function(c){ return 'il '+(c[0]+1)+' e il '+(c[1]+1); }).join(', ')+': chi colora potrebbe confonderli. Cambia uno dei due nella tavolozza.');
+    out+= d.level>=5 ? infoMsg('Livello Maestro: i numeri sono minuscoli.','Si colora sullo schermo: usa «Ingrandisci o sposta» o allarga le dita. Stampato, il numero più piccolo su A4 sarebbe alto circa '+mm.toFixed(1).replace('.',',')+' mm.') : mm>=2.2 ? okMsg('I numeri si leggono.','Il numero più piccolo, stampato su A4, è alto circa '+mm.toFixed(1).replace('.',',')+' mm.') : mm>=1.5 ? infoMsg('Molti particolari: i numeri più piccoli sono piccoli.','Stampato su A4, il più piccolo è alto circa '+mm.toFixed(1).replace('.',',')+' mm: si legge da vicino. Sullo schermo usa «Ingrandisci o sposta»; per numeri più grandi scegli un livello più basso o stampa su A3.') : warnMsg('Alcuni numeri sono molto piccoli.','Stampato su A4, il più piccolo è alto circa '+mm.toFixed(1).replace('.',',')+' mm: scegli un livello più basso o un formato più grande.');
+    if(d.level>=5) out+=infoMsg('Livello Maestro: molti colori si somigliano, ed è normale.','Le sfumature dell’opera diventano colori vicini: segui i numeri, e usa «Evidenzia in grigio le zone del colore scelto».');
+    else if(st.close.length) out+=warnMsg('Ci sono colori molto simili tra loro.', st.close.map(function(c){ return 'il '+(c[0]+1)+' e il '+(c[1]+1); }).join(', ')+': chi colora potrebbe confonderli. Cambia uno dei due nella tavolozza.');
     else out+=okMsg('I colori si distinguono bene tra loro.');
     out+=infoMsg(st.regions+' zone, '+st.colors+' colori.', d.theme==='foto'?'Disegno ricavato da una foto.':'Tema: '+(ColoraCore.THEME_NAMES[d.theme]||d.theme)+'.');
     return out; },
@@ -8150,7 +8158,7 @@ TOOLS.colora.play={
     ctx.work.innerHTML='<div class="boardfree colboard">'+ColoraView.svg(d, { play:true })+'</div>';
     var rem=ColoraView.remaining(d), pad=$('col-pad'), mine=$('col-mine'), prog=$('col-prog');
     if(prog) prog.textContent = rem.n ? 'Zone ancora da colorare: '+rem.n+' su '+d.rc.length+'.' : 'Tutte le zone sono colorate. ✨';
-    if(pad){ if(d.mode==='free') pad.innerHTML=ColoraView.FREE.map(function(c, k){ return '<button class="btn colsw" data-fc="'+k+'" aria-pressed="'+(d.fsel===k)+'" aria-label="'+esc(ColoraCore.colorName(c))+'" style="--sw:'+c+'"><span class="sw"></span></button>'; }).join('');
+    if(pad){ pad.classList.toggle('many', d.mode!=='free' && d.pal.length>40); if(d.mode==='free') pad.innerHTML=ColoraView.FREE.map(function(c, k){ return '<button class="btn colsw" data-fc="'+k+'" aria-pressed="'+(d.fsel===k)+'" aria-label="'+esc(ColoraCore.colorName(c))+'" style="--sw:'+c+'"><span class="sw"></span></button>'; }).join('');
       else pad.innerHTML=d.pal.map(function(c, k){ var left=rem.byC[k]||0, col=ColoraView.colOf(d,k); return '<button class="btn colsw'+(left?'':' done')+'" data-col="'+k+'" aria-pressed="'+(d.sel===k)+'" aria-label="Colore '+(k+1)+', '+esc(ColoraCore.colorName(col))+(left?', '+left+' zone':', finito')+'" style="--sw:'+col+'"><span class="sw"></span><b>'+(k+1)+'</b></button>'; }).join(''); }
     if(mine) mine.innerHTML = d.mode==='mine' ? '<p class="label">Il colore per il numero '+(d.sel+1)+'</p><div class="colpad small">'+ColoraView.FREE.map(function(c){ return '<button class="btn colsw" data-myc="'+c+'" aria-label="'+esc(ColoraCore.colorName(c))+'" style="--sw:'+c+'"><span class="sw"></span></button>'; }).join('')+'</div>' : ''; },
   check:function(ctx){ var rem=ColoraView.remaining(ctx.d); return rem.n ? infoMsg('Mancano '+rem.n+(rem.n===1?' zona':' zone')+'.', ctx.d.mode==='free'?'Colora tutte le zone bianche.':'Il numero accanto a ogni colore, in basso, dice quante zone ne mancano.') : okMsg('Hai colorato tutto il disegno!','Puoi stamparlo o salvarne un altro.'); },
@@ -8974,9 +8982,9 @@ colora:{ cosa:'Il mio disegno da colorare', perche:'Si colora con calma, sullo s
   strategie:['Comincia dal colore con più zone, oppure da quello che ti piace di più.','Le zone grigie sono quelle del colore scelto: così non le devi cercare.','Per le zone piccole ingrandisci il disegno; sul foglio, usa una matita appuntita.'],
   lezioni:[
     { t:'Da dove viene', p:['I quadri da dipingere con i numeri sono nati negli Stati Uniti intorno al 1950, da un’idea di Dan Robbins per la Palmer Paint Company di Detroit. Robbins raccontava di essersi ispirato a Leonardo da Vinci, che, secondo lui, numerava le parti della tela per gli allievi. Ebbero un successo enorme.','Oggi esistono come libri da colorare e come app, quasi sempre con disegni già pronti. Qui il disegno si crea ogni volta da zero.'] },
-    { t:'Come nasce un disegno', p:['L’app dipinge prima un piccolo quadro, ogni volta nuovo (un mandala, una vetrata, un paesaggio, dei fiori, delle geometrie), con sfumature, luci e ombre. Poi lo divide in zone, come fa con le tue foto.','I colori del quadro vengono ridotti a quelli della tavolozza: al massimo 8 al livello Principiante, fino a 30 al livello Esperto. Le sfumature diventano fasce di colori vicini: è questo che, alla fine, rende il disegno colorato ricco e luminoso. Due colori troppo simili diventano uno solo, così non si confondono. Ogni colore riceve un numero.','Le zone troppo piccole per scriverci un numero leggibile vengono unite a una vicina.'] },
+    { t:'Come nasce un disegno', p:['L’app dipinge prima un piccolo quadro, ogni volta nuovo (un mandala, una vetrata, un paesaggio, dei fiori, delle geometrie), con sfumature, luci e ombre. Poi lo divide in zone, come fa con le tue foto.','I colori del quadro vengono ridotti a quelli della tavolozza: al massimo 8 al livello Principiante, fino a 30 al livello Esperto (e fino a 200 al livello Maestro, solo per foto e opere d’arte). Le sfumature diventano fasce di colori vicini: è questo che, alla fine, rende il disegno colorato ricco e luminoso. Due colori troppo simili diventano uno solo, così non si confondono. Ogni colore riceve un numero.','Le zone troppo piccole per scriverci un numero leggibile vengono unite a una vicina.'] },
     { t:'La tavolozza e l’armonia dei colori', p:['Colori vicini sul cerchio dei colori (per esempio giallo, arancione, rosso) danno un’impressione calda e tranquilla; colori opposti (blu e arancione) danno vivacità.','Il chiaro e lo scuro contano quanto il colore: un disegno con zone chiare e zone scure si legge meglio, anche stampato in bianco e nero.','Nella parte Crea puoi cambiare ogni colore. Controlla ti avvisa se due colori sono così simili da confondersi.'] },
-    { t:'Dalla tua foto', p:['Con «Scegli l’immagine» l’app rimpicciolisce l’immagine, sceglie i colori principali e divide la foto in zone. Tutto avviene nel tuo dispositivo: la foto non viene inviata a nessuno.','Funzionano meglio foto con un soggetto grande e colori decisi: un fiore, un paesaggio, un animale, un oggetto. I volti vengono meno bene, perché i dettagli piccoli si perdono.','Puoi usare anche un’opera d’arte antica: un dipinto di Van Gogh o di Monet diventa un bellissimo disegno da colorare. Scaricala da uno dei musei indicati sotto «Scegli l’immagine», scegliendo un’opera segnata «Open Access» o «Public domain»: i passi sono scritti lì. Prima di metterla in un libretto, venduto o anche regalato, leggi nella guida la parte sui diritti delle immagini: le opere dei musei pubblici italiani hanno regole particolari.','Usa foto tue, o di cui hai il permesso: se vuoi vendere il disegno, i diritti dell’immagine contano.'] },
+    { t:'Dalla tua foto', p:['Con «Scegli l’immagine» l’app rimpicciolisce l’immagine, sceglie i colori principali e divide la foto in zone. Tutto avviene nel tuo dispositivo: la foto non viene inviata a nessuno.','Funzionano meglio foto con un soggetto grande e colori decisi: un fiore, un paesaggio, un animale, un oggetto. I volti vengono meno bene, perché i dettagli piccoli si perdono.','Per le opere d’arte ricche di particolari c’è il livello Maestro: fino a 200 colori e migliaia di zone. Si colora sullo schermo, ingrandendo: stampato, anche su A3, i numeri sarebbero minuscoli, e nessuno ha in casa 200 matite diverse.','Puoi usare anche un’opera d’arte antica: un dipinto di Van Gogh o di Monet diventa un bellissimo disegno da colorare. Scaricala da uno dei musei indicati sotto «Scegli l’immagine», scegliendo un’opera segnata «Open Access» o «Public domain»: i passi sono scritti lì. Prima di metterla in un libretto, venduto o anche regalato, leggi nella guida la parte sui diritti delle immagini: le opere dei musei pubblici italiani hanno regole particolari.','Usa foto tue, o di cui hai il permesso: se vuoi vendere il disegno, i diritti dell’immagine contano.'] },
     { t:'Sul foglio', p:['La stampa ha il disegno con i numeri, la legenda con il nome di ogni colore e, se vuoi, il disegno colorato su un’altra pagina.','Carta: va bene quella normale da 80 g/m² per le matite; per i pennarelli è meglio una carta più spessa (da 120 g/m² in su), che non lascia passare il colore.','In un libretto stampato in bianco e nero i nomi dei colori nella legenda permettono di colorare lo stesso.'] } ],
   guida:['Il disegno della partita è già nella parte Crea: puoi tenerlo così o cambiarlo.','Scegli tema e livello e premi «Disegno nuovo»; «Altri colori» cambia la tavolozza.','Tocca un quadratino della tavolozza per cambiare quel colore.','<b>Controlla</b> dice se i numeri si leggono e se ci sono colori troppo simili.'] },
 crucipixel:{ cosa:'Il mio crucipixel', perche:'Un disegno nascosto da ritrovare con i numeri ai margini.', controllo:'disegno ricostruibile solo ragionando',
@@ -9130,7 +9138,7 @@ var Percorso=(function(){
     h+='<section class="panel"><h2>Arte e benessere</h2><p>Colorare con i numeri disegni sempre nuovi, una tua foto o un’opera d’arte scaricata da un museo, creare mandala, disegnare con calma: e che cosa dicono davvero gli studi sull’arte e sul colorare.</p><div class="row"><a class="btn primary" href="#p-colora-0">Colora un disegno</a><a class="btn" href="#colora" data-coimg="1">Colora un’opera d’arte</a><a class="btn" href="#arte">Che cosa dicono gli studi</a></div></section>';
     h+='<section class="panel"><h2>Enigmi celebri</h2><p>I sette ponti di Königsberg, le tre porte, il sudoku con 17 indizi, il messaggio di Zodiac: rompicapi famosi <b>risolti e spiegati</b>, e problemi <b>ancora aperti</b> che forse qualcuno risolverà.</p><a class="btn" href="#enigmi">Scopri gli enigmi celebri</a></section>';
     h+='<section class="panel"><h2>Altri strumenti per creare</h2><p>Mandala, disegni da colorare, trova le differenze, cruciverba con le tue definizioni, rebus, giochi di squadra e <b>Crea un libro</b> per stampare, regalare o pubblicare un libretto: li trovi in <a href="#crea">Crea</a>.</p></section>'+
-      '<p class="note">Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.24.</p>';
+      '<p class="note">Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.25.</p>';
     app.innerHTML=h; }
 
   // un solo riquadro che spiega tutti i modi di portare fuori un gioco, sopra i pulsanti Condividi e Stampa
@@ -9612,7 +9620,7 @@ function renderGuide(){
 }
 
 /* ===================== INGRANDIMENTO DEL FOGLIO ===================== */
-var ZOOMS=[1,1.5,2,3,4];
+var ZOOMS=[1,1.5,2,3,4,6,8];
 function setupZoom(){ var sh=document.querySelector('#app .sheet'); if(!sh || sh.querySelector('.zoombar')) return;
   if(!sh.querySelector('.board, .boardfree, #work')) return;
   var z=0, bar=document.createElement('div'); bar.className='zoombar noprint'; bar.setAttribute('role','toolbar'); bar.setAttribute('aria-label','Ingrandimento del foglio');

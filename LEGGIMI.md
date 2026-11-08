@@ -2,6 +2,12 @@
 
 App web gratuita che accompagna il corso. Funziona su telefono, tablet e computer, si può installare come un'icona e lavora anche senza connessione. Nessun account, nessun dato inviato: tutto resta sul dispositivo.
 
+## Versione 3.24 (8 novembre 2026)
+- **Disegni da colorare molto più belli e ricchi.** Ogni disegno ora nasce come un piccolo dipinto, ogni volta nuovo, con sfumature, luci e ombre, poi viene diviso in zone. Ai livelli alti ci sono molti più particolari e colori: fino a 30 colori e, all’Esperto, di solito da 150 a 350 zone.
+- **Le tue foto e le opere d’arte** si trasformano con lo stesso metodo, a una risoluzione più alta e con i colori ravvivati: si riconoscono molto meglio.
+- **Mostra il disegno finito / Riprendi la partita:** nel gioco sullo schermo il disegno colorato compare al posto della partita, e un tocco riporta ai numeri senza perdere le zone già colorate.
+- Verifica in `VERIFICA-3.24.md` (nei sorgenti).
+
 ## Versione 3.23 (8 novembre 2026)
 - Frase sui diritti delle opere dei musei resa più precisa, come chiesto dalla verifica indipendente. Verifica in `VERIFICA-3.23.md` (nei sorgenti).
 

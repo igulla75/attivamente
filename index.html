@@ -232,6 +232,33 @@ input.wide{min-height:var(--hit);padding:0 12px;border:1px solid var(--rule);bor
 .abc{text-align:center;letter-spacing:.3em;font-weight:700}
 .keytab td,.keytab th{text-align:center;min-width:2.2em;padding:6px}
 .work-area{min-width:0;max-width:100%}
+/* colorare con i numeri e arte */
+.colpad{display:flex;flex-wrap:wrap;gap:6px}
+.colsw{min-width:52px;padding:0 6px;gap:6px;justify-content:center}
+.colsw .sw{display:inline-block;width:26px;height:26px;border-radius:6px;background:var(--sw);border:1.5px solid #444;flex:none}
+.colsw.done{opacity:.5}
+.colsw[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:1px}
+.colpad.small .colsw{min-width:44px;min-height:44px}
+@media screen and (max-width:900px) and (orientation:portrait){.bench.game .side .padsym.colpad{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;-webkit-overflow-scrolling:touch}.bench.game .side .padsym.colpad .colsw{flex:none}}
+.collegend{list-style:none;padding:0;margin:8px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px 14px}
+.collegend li{display:flex;align-items:center;gap:6px}
+.collegend.edit input[type=color]{width:46px;height:38px;border:1px solid var(--rule);border-radius:6px;padding:0 2px;background:var(--paper)}
+.colboard path[data-r]{cursor:pointer}
+.collegtitle{margin:10px 0 0;font-size:1.1em}
+.arwheel{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.arwheel>div:last-child{flex:1;min-width:220px}
+.arsw{display:inline-block;width:34px;height:34px;border-radius:6px;border:1px solid rgba(0,0,0,.2)}
+.gbody.arte h3{margin:10px 0 0}
+#co-photo{max-width:100%;min-width:0;width:100%;font-size:16px}
+#cp-photo{max-width:100%;min-width:0;width:100%;font-size:16px}
+.imgsrc{margin-top:6px}.imgsrc summary{cursor:pointer;font-weight:700;min-height:40px;display:flex;align-items:center}.srclist{display:grid;gap:6px;padding-left:1.2em;margin:6px 0}.srclist a{overflow-wrap:anywhere}
+.cpgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}.cpgrid.one{grid-template-columns:minmax(0,420px)}.cpgrid svg{width:100%;height:auto;display:block}.cpgrid.big{grid-template-columns:2fr 3fr}
+@media (max-width:700px){.cpgrid{grid-template-columns:1fr}}
+@media print{.cpgrid,.cpgrid.big{grid-template-columns:1fr;gap:6mm}.cpgrid>div{width:100%}.cpgrid svg{width:100%!important;height:104mm!important}.cpgrid.big>div:last-child{break-before:page}.cpgrid.big>div:last-child svg{height:235mm!important}}
+.bk-p .cpgrid,.bk-p .cpgrid.big{grid-template-columns:1fr 1fr}.bk-p .cpgrid svg{height:auto!important}.bk-p .cpgrid.big>div:last-child{break-before:auto}
+.bk-p .colboard{max-width:80%;margin:0 auto}.bk-p .collegend{font-size:9pt;grid-template-columns:repeat(4,1fr);gap:2px 8px}.bk-p .collegend svg{width:24px;height:18px}.bk-p .collegtitle{font-size:10pt;margin:4px 0 0}
+@media print{ .collegend{grid-template-columns:repeat(4,1fr);font-size:10pt;gap:3px 10px} .colboard svg{max-height:205mm} }
+
 .work-area>*{max-width:100%;min-width:0}
 .zoombar{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
 .zlab{min-width:3.5em;text-align:center;font-weight:700}
@@ -1357,6 +1384,432 @@ var KakuroCore = (function(){
   return { runs:runs, problems:problems, fill:fill, sums:sums, count:count, make:make, shape:shape };
 })();
 
+/* ===================== COLORARE CON I NUMERI: il motore =====================
+   Un disegno è una griglia di etichette (w×h): ogni etichetta è una zona da colorare.
+   - generate(tema, livello, seme): un disegno sempre nuovo (mandala, vetrata, paesaggio, fiori, geometrie);
+   - fromPixels(rgba, w, h, colori, livello): un disegno da una foto (tutto resta nel dispositivo);
+   - geometry(d): i contorni lisci delle zone, le linee del disegno e il posto dei numeri.
+   Le zone troppo piccole per scriverci un numero leggibile vengono unite alla vicina.
+   I colori del disegno vengono ridotti a K colori (la tavolozza) con il metodo k-medie nello spazio OKLab,
+   dove le distanze tra i colori assomigliano a quelle che vede l'occhio. */
+var ColoraCore = (function(){
+  function rng(seed){ var s=((Math.imul((seed>>>0)||1, 2654435761)>>>0) ^ 0x9E3779B9)>>>0 || 1, f=function(){ s^=s<<13; s>>>=0; s^=s>>>17; s^=s<<5; s>>>=0; return s/4294967296; }; for(var i=0;i<8;i++) f(); return f; }
+  var TAU=Math.PI*2;
+  // livelli: colori, raggio minimo (in pixel della griglia) della zona per scriverci il numero
+  var LEVELS=[ { k:6, rmin:5.2 }, { k:8, rmin:4.2 }, { k:12, rmin:3.4 }, { k:16, rmin:2.8 }, { k:24, rmin:2.3 } ];
+  var THEMES=['mandala','vetrata','paesaggio','fiori','geometrie'];
+  var THEME_NAMES={ mandala:'Mandala', vetrata:'Vetrata', paesaggio:'Paesaggio', fiori:'Fiori', geometrie:'Geometrie', foto:'Dalla tua foto' };
+
+  /* ---------- colori ---------- */
+  function hsl(h, s, l){ h=((h%360)+360)%360/360; s=Math.max(0,Math.min(1,s)); l=Math.max(0,Math.min(1,l));
+    function f(n){ var k=(n+h*12)%12, a=s*Math.min(l,1-l); return l-a*Math.max(-1,Math.min(k-3,9-k,1)); }
+    return [f(0), f(8), f(4)]; }
+  function lin(c){ return c<=0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); }
+  function gam(c){ c=Math.max(0,Math.min(1,c)); return c<=0.0031308 ? 12.92*c : 1.055*Math.pow(c,1/2.4)-0.055; }
+  function toLab(rgb){ var r=lin(rgb[0]), g=lin(rgb[1]), b=lin(rgb[2]);
+    var l=Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b), m=Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b), s=Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+    return [0.2104542553*l+0.7936177850*m-0.0040720468*s, 1.9779984951*l-2.4285922050*m+0.4505937099*s, 0.0259040371*l+0.7827717662*m-0.8086757660*s]; }
+  function fromLab(L){ var l=L[0]+0.3963377774*L[1]+0.2158037573*L[2], m=L[0]-0.1055613458*L[1]-0.0638541728*L[2], s=L[0]-0.0894841775*L[1]-1.2914855480*L[2];
+    l=l*l*l; m=m*m*m; s=s*s*s;
+    return [gam(4.0767416621*l-3.3077115913*m+0.2309699292*s), gam(-1.2684380046*l+2.6097574011*m-0.3413193965*s), gam(-0.0041960863*l-0.7034186147*m+1.7076147010*s)]; }
+  function hex(rgb){ return '#'+rgb.map(function(c){ var v=Math.round(Math.max(0,Math.min(1,c))*255); return (v<16?'0':'')+v.toString(16); }).join(''); }
+  function unhex(h){ return [parseInt(h.slice(1,3),16)/255, parseInt(h.slice(3,5),16)/255, parseInt(h.slice(5,7),16)/255]; }
+  function dE(a, b){ var x=toLab(unhex(a)), y=toLab(unhex(b)); return Math.hypot(x[0]-y[0], x[1]-y[1], x[2]-y[2])*100; }
+  // nome italiano approssimato di un colore (per la legenda stampata)
+  function colorName(h){ var c=unhex(h), mx=Math.max.apply(null,c), mn=Math.min.apply(null,c), l=(mx+mn)/2, d=mx-mn, s=d===0?0:d/(1-Math.abs(2*l-1)), hu=0;
+    if(d){ if(mx===c[0]) hu=60*(((c[1]-c[2])/d)%6); else if(mx===c[1]) hu=60*((c[2]-c[0])/d+2); else hu=60*((c[0]-c[1])/d+4); } hu=(hu+360)%360;
+    if(l>0.93) return 'bianco'; if(l<0.1) return 'nero';
+    if(s<0.13) return l>0.7?'grigio chiaro':l<0.35?'grigio scuro':'grigio';
+    var n; if(hu<12||hu>=345) n='rosso'; else if(hu<40) n=(l<0.42?'marrone':'arancione'); else if(hu<62) n=(l<0.38?'marrone':'giallo'); else if(hu<95) n='verde chiaro'; else if(hu<160) n='verde'; else if(hu<190) n='verde acqua'; else if(hu<215) n='azzurro'; else if(hu<255) n='blu'; else if(hu<290) n='viola'; else if(hu<325) n='fucsia'; else n='rosa';
+    if(n==='rosso' && l>0.7) n='rosa';
+    if(n==='azzurro' && l<0.38) n='blu';
+    var mod = l>0.74 ? ' chiaro' : l<0.32 ? ' scuro' : '';
+    if(n==='rosa' || n==='marrone' || n==='bianco') mod = (l<0.32 && n!=='marrone') ? ' scuro' : (l>0.85 && n==='rosa' ? ' chiaro' : '');
+    if(mod && (n==='verde chiaro' || n==='verde acqua')) mod = l>0.74 ? ' (tono chiaro)' : ' (tono scuro)';
+    return n+mod; }
+
+  // nomi diversi per i colori di una tavolozza: tinta + chiaro/scuro; a parità di tinta si ordina dal più scuro al più chiaro
+  function baseName(h){ var c=unhex(h), mx=Math.max.apply(null,c), mn=Math.min.apply(null,c), l=(mx+mn)/2, d=mx-mn, s=d===0?0:d/(1-Math.abs(2*l-1)), hu=0;
+    if(d){ if(mx===c[0]) hu=60*(((c[1]-c[2])/d)%6); else if(mx===c[1]) hu=60*((c[2]-c[0])/d+2); else hu=60*((c[0]-c[1])/d+4); } hu=(hu+360)%360;
+    if(l>0.94) return ['bianco', l]; if(l<0.09) return ['nero', l]; if(s<0.13) return ['grigio', l];
+    var n; if(hu<12||hu>=345) n=(l>0.72?'rosa':'rosso'); else if(hu<40) n=(l<0.42?'marrone':'arancione'); else if(hu<62) n=(l<0.36?'marrone':'giallo'); else if(hu<95) n='verde giallo'; else if(hu<160) n='verde'; else if(hu<190) n='verde acqua'; else if(hu<215) n=(l<0.36?'blu':'azzurro'); else if(hu<255) n='blu'; else if(hu<290) n='viola'; else if(hu<325) n='fucsia'; else n='rosa';
+    if(s<0.28 && n!=='marrone' && n!=='rosa') n+=' spento';
+    return [n, l]; }
+  function names(pal){ var b=pal.map(baseName), groups={}, out=pal.map(function(){ return ''; });
+    b.forEach(function(x, i){ (groups[x[0]]=groups[x[0]]||[]).push(i); });
+    Object.keys(groups).forEach(function(nm){ var g=groups[nm].sort(function(a, c){ return b[a][1]-b[c][1]; }), n=g.length;
+      var LAD={ 1:null, 2:['scuro','chiaro'], 3:['scuro','medio','chiaro'], 4:['molto scuro','scuro','chiaro','molto chiaro'], 5:['molto scuro','scuro','medio','chiaro','molto chiaro'] }[n];
+      g.forEach(function(i, k){ var base=nm, inv=(nm==='bianco'||nm==='nero');
+        if(n===1) out[i]= inv ? base : base+(b[i][1]>0.78?' chiaro':b[i][1]<0.3?' scuro':'');
+        else if(LAD) out[i]=base+' '+LAD[k];
+        else out[i]=base+', tono '+(k+1)+' di '+n; }); });
+    return out; }
+  /* ---------- griglia di etichette ---------- */
+  function Canvas(w, h){ var lab=new Int32Array(w*h), cols=[], keys={};
+    return { w:w, h:h, lab:lab, cols:cols,
+      // fn(x, y) restituisce [chiave, colore]: stessa chiave = stessa zona (prima della divisione in pezzi connessi)
+      paint:function(fn){ for(var y=0;y<h;y++) for(var x=0;x<w;x++){ var r=fn(x+0.5, y+0.5), k=r[0], id=keys[k]; if(id===undefined){ id=keys[k]=cols.length; cols.push(r[1]); } lab[y*w+x]=id; } } }; }
+  // ogni zona deve essere un pezzo unico (connesso): i pezzi separati diventano zone diverse
+  function splitComponents(w, h, lab, cols){ var out=new Int32Array(w*h).fill(-1), nc=[], st=new Int32Array(w*h);
+    for(var i=0;i<w*h;i++){ if(out[i]>=0) continue; var id=nc.length, v=lab[i], sp=0; nc.push(cols[v]); out[i]=id; st[sp++]=i;
+      while(sp){ var p=st[--sp], x=p%w, y=(p-x)/w;
+        if(x>0 && out[p-1]<0 && lab[p-1]===v){ out[p-1]=id; st[sp++]=p-1; }
+        if(x<w-1 && out[p+1]<0 && lab[p+1]===v){ out[p+1]=id; st[sp++]=p+1; }
+        if(y>0 && out[p-w]<0 && lab[p-w]===v){ out[p-w]=id; st[sp++]=p-w; }
+        if(y<h-1 && out[p+w]<0 && lab[p+w]===v){ out[p+w]=id; st[sp++]=p+w; } } }
+    return { lab:out, cols:nc }; }
+  // distanza (approssimata) di ogni pixel dal bordo della sua zona; il bordo dell'immagine conta come bordo
+  function distField(w, h, lab){ var D=new Float32Array(w*h), INF=1e9, i, x, y;
+    for(y=0;y<h;y++) for(x=0;x<w;x++){ i=y*w+x; var v=lab[i];
+      var edge = x===0||y===0||x===w-1||y===h-1 || lab[i-1]!==v || lab[i+1]!==v || lab[i-w]!==v || lab[i+w]!==v;
+      D[i]=edge?0.5:INF; }
+    var a=1, b=1.4142;
+    for(y=0;y<h;y++) for(x=0;x<w;x++){ i=y*w+x; if(D[i]===0.5) continue; var v2=lab[i], m=D[i];
+      if(x>0 && lab[i-1]===v2) m=Math.min(m, D[i-1]+a); if(y>0 && lab[i-w]===v2) m=Math.min(m, D[i-w]+a);
+      if(x>0 && y>0 && lab[i-w-1]===v2) m=Math.min(m, D[i-w-1]+b); if(x<w-1 && y>0 && lab[i-w+1]===v2) m=Math.min(m, D[i-w+1]+b); D[i]=m; }
+    for(y=h-1;y>=0;y--) for(x=w-1;x>=0;x--){ i=y*w+x; if(D[i]===0.5) continue; var v3=lab[i], n=D[i];
+      if(x<w-1 && lab[i+1]===v3) n=Math.min(n, D[i+1]+a); if(y<h-1 && lab[i+w]===v3) n=Math.min(n, D[i+w]+a);
+      if(x<w-1 && y<h-1 && lab[i+w+1]===v3) n=Math.min(n, D[i+w+1]+b); if(x>0 && y<h-1 && lab[i+w-1]===v3) n=Math.min(n, D[i+w-1]+b); D[i]=n; }
+    return D; }
+  // unisce le zone dove un numero non starebbe; ognuna va nella vicina con il confine più lungo
+  // (a parità, quella di colore più simile). colorWeight>0: per le foto conta di più il colore simile.
+  function mergeSmall(w, h, lab, cols, rmin, colorWeight){
+    for(var round=0; round<40; round++){
+      var n=cols.length, best=new Float32Array(n), D=distField(w,h,lab), i;
+      for(i=0;i<w*h;i++){ if(D[i]>best[lab[i]]) best[lab[i]]=D[i]; }
+      var small=[], isSmall=new Uint8Array(n); for(i=0;i<n;i++) if(best[i]<rmin && cols[i]){ small.push(i); isSmall[i]=1; }
+      if(!small.length) break;
+      // confini tra zone
+      var border={};
+      function add(a, b){ if(a===b) return; if(isSmall[a]){ var k=a+','+b; border[k]=(border[k]||0)+1; } if(isSmall[b]){ var k2=b+','+a; border[k2]=(border[k2]||0)+1; } }
+      for(var y=0;y<h;y++) for(var x=0;x<w;x++){ i=y*w+x; if(x<w-1) add(lab[i], lab[i+1]); if(y<h-1) add(lab[i], lab[i+w]); }
+      var target={}, cand={};
+      Object.keys(border).forEach(function(k){ var p=k.split(','), a=+p[0], b=+p[1], len=border[k], ca=toLab(cols[a]), cb=toLab(cols[b]);
+        var dist=Math.hypot(ca[0]-cb[0], ca[1]-cb[1], ca[2]-cb[2]);
+        var score = colorWeight ? len/(1+colorWeight*dist*10) : len*1000 - dist;
+        if(isSmall[b]) score*=0.5; // meglio unirsi a una zona grande
+        if(!cand[a] || score>cand[a].s) cand[a]={ b:b, s:score }; });
+      // le più piccole per prime; una zona che riceve non si unisce nello stesso giro (evita catene)
+      small.sort(function(p, q){ return best[p]-best[q]; });
+      var gone={}, recv={};
+      small.forEach(function(a){ if(!cand[a] || recv[a]) return; var b=cand[a].b; if(gone[b]) return; target[a]=b; gone[a]=1; recv[b]=1; });
+      if(!Object.keys(target).length) break;
+      for(i=0;i<w*h;i++){ var t=target[lab[i]]; if(t!==undefined) lab[i]=t; }
+      Object.keys(target).forEach(function(a){ cols[a]=null; });
+    }
+    // rinumera
+    var map={}, nc=[]; for(var j=0;j<w*h;j++){ var v=lab[j], m=map[v]; if(m===undefined){ m=map[v]=nc.length; nc.push(cols[v]); } lab[j]=m; }
+    return { lab:lab, cols:nc }; }
+  // k-medie pesate in OKLab: restituisce la tavolozza e l'indice di colore di ogni zona
+  function quantize(cols, weights, K, seed, minDE){ var R=rng(seed||7), P=cols.map(toLab), n=P.length;
+    var uniq={}, ucount=0; cols.forEach(function(c){ var k=hex(c); if(!uniq[k]){ uniq[k]=1; ucount++; } }); K=Math.max(1, Math.min(K, ucount));
+    // k-medie++ deterministico
+    var C=[], dmin=new Float64Array(n).fill(Infinity), tot=0, i, j;
+    var first=0, wmax=-1; for(i=0;i<n;i++) if(weights[i]>wmax){ wmax=weights[i]; first=i; } C.push(P[first].slice());
+    while(C.length<K){ tot=0; for(i=0;i<n;i++){ var c=C[C.length-1], dd=Math.pow(P[i][0]-c[0],2)+Math.pow(P[i][1]-c[1],2)+Math.pow(P[i][2]-c[2],2); if(dd<dmin[i]) dmin[i]=dd; tot+=dmin[i]*Math.sqrt(weights[i]); }
+      if(tot<=0) break; var r=R()*tot, pick=n-1; for(i=0;i<n;i++){ r-=dmin[i]*Math.sqrt(weights[i]); if(r<=0){ pick=i; break; } } C.push(P[pick].slice()); }
+    var asg=new Int32Array(n);
+    for(var it=0; it<25; it++){ var moved=0;
+      for(i=0;i<n;i++){ var bj=0, bd=Infinity; for(j=0;j<C.length;j++){ var e=Math.pow(P[i][0]-C[j][0],2)+Math.pow(P[i][1]-C[j][1],2)+Math.pow(P[i][2]-C[j][2],2); if(e<bd){ bd=e; bj=j; } } if(asg[i]!==bj){ asg[i]=bj; moved++; } }
+      var S=C.map(function(){ return [0,0,0,0]; }); for(i=0;i<n;i++){ var s=S[asg[i]], ww=weights[i]; s[0]+=P[i][0]*ww; s[1]+=P[i][1]*ww; s[2]+=P[i][2]*ww; s[3]+=ww; }
+      S.forEach(function(s, k){ if(s[3]>0) C[k]=[s[0]/s[3], s[1]/s[3], s[2]/s[3]]; });
+      if(!moved && it>0) break; }
+    // colori troppo simili si fondono (differenza minima percepibile, in unità OKLab×100)
+    var MIN=minDE||9; for(var guard=0; guard<40; guard++){ var ba=-1, bb=-1, bd2=1e9; for(var a=0;a<C.length;a++) for(var b=a+1;b<C.length;b++){ var e2=Math.hypot(C[a][0]-C[b][0],C[a][1]-C[b][1],C[a][2]-C[b][2])*100; if(e2<bd2){ bd2=e2; ba=a; bb=b; } }
+      if(ba<0 || bd2>=MIN) break; var wa=0, wb=0; for(i=0;i<n;i++){ if(asg[i]===ba) wa+=weights[i]; if(asg[i]===bb) wb+=weights[i]; }
+      C[ba]=[(C[ba][0]*wa+C[bb][0]*wb)/(wa+wb||1), (C[ba][1]*wa+C[bb][1]*wb)/(wa+wb||1), (C[ba][2]*wa+C[bb][2]*wb)/(wa+wb||1)]; C.splice(bb,1);
+      for(i=0;i<n;i++){ if(asg[i]===bb) asg[i]=ba; else if(asg[i]>bb) asg[i]--; } }
+    // solo i colori usati, in ordine di tinta e chiarezza
+    var used={}; for(i=0;i<n;i++) used[asg[i]]=1;
+    var order=Object.keys(used).map(Number).map(function(k){ var L=C[k], hue=Math.atan2(L[2],L[1]), ch=Math.hypot(L[1],L[2]); return { k:k, key: ch<0.03 ? 10+L[0] : ((hue+Math.PI*1.12)%TAU)+L[0]*0.001 }; }).sort(function(a,b){ return a.key-b.key; });
+    var re={}; order.forEach(function(o, idx){ re[o.k]=idx; });
+    return { pal:order.map(function(o){ return hex(fromLab(C[o.k])); }), rc:Array.prototype.map.call(asg, function(a){ return re[a]; }) }; }
+
+  /* ---------- codifica compatta della griglia ---------- */
+  function encode(lab){ var out=[], i=0, n=lab.length; while(i<n){ var v=lab[i], j=i+1; while(j<n && lab[j]===v) j++; out.push(v.toString(36)+(j-i>1?'.'+(j-i).toString(36):'')); i=j; } return out.join(','); }
+  function decode(s, w, h){ var lab=new Int32Array(w*h), p=0; s.split(',').forEach(function(t){ var q=t.split('.'), v=parseInt(q[0],36), k=q[1]?parseInt(q[1],36):1; for(var i=0;i<k;i++) lab[p++]=v; }); return lab; }
+
+  function finish(cv, L, seed, theme, extra){ var lv=LEVELS[L];
+    var sp=splitComponents(cv.w, cv.h, cv.lab, cv.cols), mg=mergeSmall(cv.w, cv.h, sp.lab, sp.cols, lv.rmin, extra&&extra.photo?1:0);
+    var area=new Float64Array(mg.cols.length); for(var i=0;i<mg.lab.length;i++) area[mg.lab[i]]++;
+    var q=quantize(mg.cols, Array.prototype.slice.call(area), lv.k, seed, lv.k>=16?7:lv.k>=12?8:9);
+    var d={ theme:theme, level:L, w:cv.w, h:cv.h, rle:encode(mg.lab), rc:q.rc, pal:q.pal, seed:seed };
+    return d; }
+
+  /* ---------- rumore semplice per linee naturali ---------- */
+  function wave(R, terms){ var t=[]; for(var i=0;i<terms;i++) t.push({ f:(i+1)*(0.7+R()*0.8), a:1/(i+1), p:R()*TAU }); var norm=t.reduce(function(s,q){ return s+q.a; },0);
+    return function(x){ var s=0; for(var i=0;i<t.length;i++) s+=t[i].a*Math.sin(x*t[i].f*TAU+t[i].p); return s/norm; }; }
+  function pick(R, a){ return a[Math.floor(R()*a.length)]; }
+  function jit(R, c, amt){ var L=toLab(c); L[0]+= (R()-0.5)*amt; L[1]+=(R()-0.5)*amt*0.5; L[2]+=(R()-0.5)*amt*0.5; return fromLab(L); }
+  // schema di colori: tinte di base armoniche
+  function scheme(R){ var h0=R()*360, kind=pick(R,['analoghi','complementari','triade','tramonto','mare','bosco']), hs;
+    if(kind==='analoghi') hs=[h0, h0+30, h0+60, h0-30];
+    else if(kind==='complementari') hs=[h0, h0+180, h0+20, h0+200];
+    else if(kind==='triade') hs=[h0, h0+120, h0+240, h0+60];
+    else if(kind==='tramonto') hs=[45, 25, 350, 300, 260];
+    else if(kind==='mare') hs=[190, 205, 225, 165, 45];
+    else hs=[95, 125, 150, 40, 20];
+    return { kind:kind, hs:hs, h0:h0 }; }
+
+  /* ---------- tema: mandala ---------- */
+  function mandala(R, L){ var S=200, cv=Canvas(S,S), sc=scheme(R);
+    var k=pick(R, [[6,8],[8,8,6],[8,10,12],[12,10,16],[12,16,16]][L]);
+    var nr=[3,4,5,6,8][L]+(R()<0.5?0:1), radii=[], acc=0, ws=[]; for(var i=0;i<nr;i++){ var ww=0.7+R()*0.8; ws.push(ww); acc+=ww; }
+    var r0=0.06+R()*0.05, cur=r0; ws.forEach(function(ww){ cur+=ww/acc*(0.93-r0); radii.push(cur); });
+    var rings=radii.map(function(Ri, i){ var prev=i?radii[i-1]:r0, band=Ri-prev, arc=TAU*(prev+band/2)*S/2;
+      var mi = arc/(k*2) > [26,22,18,14,11][L] ? 2 : 1; if(arc/(k*mi) < [20,16,12,10,8][L]) mi=0.5;
+      var sectors=Math.max(1, Math.round(k*mi));
+      return { R:Ri, prev:prev, amp:band*(0.25+R()*0.5), shape:pick(R,['petalo','onda','punte','tondo']), sec:sectors, off:R()<0.5?0:0.5,
+        split: L>=2 && R()<0.35+L*0.1 && band*S/2>[0,0,9,7,6][L] ? pick(R,['meta','rombo']) : null,
+        hue: sc.hs[i%sc.hs.length]+i*9+(R()-0.5)*14, light: [0.38,0.58,0.76][(i+(nr%2))%3]+(R()-0.5)*0.08, sat:0.5+R()*0.35, alt:R()<0.4 }; });
+    function bound(i, th){ var g=rings[i]; if(i<0) return r0; var t=(th/TAU*g.sec+g.off)%1, f;
+      if(g.shape==='petalo') f=Math.sin(t*Math.PI); else if(g.shape==='onda') f=0.5+0.5*Math.cos(t*TAU); else if(g.shape==='punte') f=1-Math.abs(2*t-1); else f=1;
+      return g.R - g.amp*(1-f); }
+    var bgHue=sc.hs[0]+180+(R()-0.5)*40, bgL=R()<0.5?0.86:0.3, bgRays=[1,k/2,k,k,k*2][L]|0, centerParts=L>=3?k/2|0:1;
+    cv.paint(function(x, y){ var u=x/S*2-1, v=y/S*2-1, r=Math.hypot(u,v), th=(Math.atan2(v,u)+TAU)%TAU;
+      if(r<r0){ var cs=Math.floor(th/TAU*centerParts); return ['c'+cs, hsl(sc.hs[1]+(cs%2)*10, 0.7, 0.55+(cs%2)*0.08)]; }
+      for(var i=0;i<rings.length;i++){ var b=bound(i, th); if(r<b){ var g=rings[i], pv=i?bound(i-1,th):r0, t=th/TAU*g.sec+g.off, s=Math.floor(t)%g.sec, tt=t-Math.floor(t), rho=(r-pv)/Math.max(1e-6,b-pv), sub=0;
+          if(g.split==='meta') sub = rho<0.5+0.18*Math.sin(tt*Math.PI) ? 1:0; else if(g.split==='rombo') sub = Math.abs(tt-0.5)*2+Math.abs(rho-0.5)*2<0.85 ? 1:0;
+          var par = g.alt ? s%2 : 0, col=hsl(g.hue+par*25+sub*15, g.sat, g.light+(sub?0.16:0)-par*0.1);
+          return ['r'+i+'_'+s+'_'+sub, col]; } }
+      var bs=Math.floor(((th/TAU*bgRays)+0.5))%Math.max(1,bgRays), corner=r>1?1:0;
+      return ['b'+bs+'_'+corner, hsl(bgHue+(bs%2)*12, 0.35, bgL+(bs%2)*0.05-corner*0.06)]; });
+    return cv; }
+
+  /* ---------- tema: vetrata (Voronoi con una figura) ---------- */
+  function vetrata(R, L){ var S=200, cv=Canvas(S,S), N=[22,45,90,160,280][L], pts=[];
+    var cell=Math.sqrt(S*S/N); for(var gy=0; gy<S; gy+=cell) for(var gx=0; gx<S; gx+=cell) pts.push([gx+R()*cell, gy+R()*cell]);
+    // due passi di Lloyd: celle più regolari
+    for(var it=0; it<2; it++){ var acc=pts.map(function(){ return [0,0,0]; });
+      for(var y=0;y<S;y+=2) for(var x=0;x<S;x+=2){ var bi=0, bd=1e9; for(var i=0;i<pts.length;i++){ var dx=pts[i][0]-x, dy=pts[i][1]-y, dd=dx*dx+dy*dy; if(dd<bd){ bd=dd; bi=i; } } acc[bi][0]+=x; acc[bi][1]+=y; acc[bi][2]++; }
+      pts=pts.map(function(p,i){ return acc[i][2]?[acc[i][0]/acc[i][2], acc[i][1]/acc[i][2]]:p; }); }
+    var sc=scheme(R), motif=pick(R,['sole','fiore','cuore','stella','onde']), mx=0.5+(R()-0.5)*0.2, my=0.5+(R()-0.5)*0.2, ms=0.32+R()*0.1, petals=pick(R,[5,6,7,8]);
+    function inMotif(u, v){ var x=u-mx, y=v-my, r=Math.hypot(x,y)/ms, th=Math.atan2(y,x);
+      if(motif==='sole') return r<0.75 ? 2 : r<1 ? 1 : 0;
+      if(motif==='fiore') return r<0.35 ? 2 : r<0.6+0.4*Math.abs(Math.cos(th*petals/2)) ? 1 : 0;
+      if(motif==='cuore'){ var X=x/ms*1.25, Y=-y/ms*1.25+0.15, q=X*X+Y*Y-1; return q*q*q-X*X*Y*Y*Y<0 ? 1 : 0; }
+      if(motif==='stella'){ var a=((th%(TAU/5))+TAU)%(TAU/5)-TAU/10, rr=0.5/Math.cos(a)*(0.62+0.38*Math.abs(Math.cos(a*5))); return r<0.35?2: r<rr*1.6 ? 1 : 0; }
+      return Math.sin(u*9+Math.sin(v*5)*1.5)>0.55 ? 1 : 0; }
+    var hin=sc.hs[0], hout=sc.hs[1]+(sc.kind==='analoghi'?60:0);
+    cv.paint(function(x, y){ var bi=0, bd=1e9; for(var i=0;i<pts.length;i++){ var dx=pts[i][0]-x, dy=pts[i][1]-y, dd=dx*dx+dy*dy; if(dd<bd){ bd=dd; bi=i; } }
+      var u=x/S, v=y/S, m=inMotif(u,v), p=pts[bi], pu=p[0]/S, pv=p[1]/S, g=Math.hypot(pu-mx, pv-my);
+      var sp=[100,110,130,160,190][L], jl=((bi*29)%11)/10-0.5, jh=((bi*17)%7)/6-0.5;
+      var col = m===2 ? hsl(hin+30+jh*sp*0.3, 0.75, 0.62+jl*0.15) : m===1 ? hsl(hin+g*sp+jh*sp*0.25, 0.7, 0.52+jl*0.2) : hsl(hout+pv*sp-pu*sp*0.45+jh*sp*0.2, 0.5+0.2*((bi*7)%3)/2, 0.5+jl*(0.12+L*0.04));
+      return ['v'+bi+'_'+m, col]; });
+    return cv; }
+
+  /* ---------- tema: paesaggio ---------- */
+  function paesaggio(R, L){ var W=240, H=180, cv=Canvas(W,H), sunset=R()<0.6, sea=R()<0.5;
+    var hz=H*(sea?0.6:0.66), sx=W*(0.25+R()*0.5), sy=hz-H*(0.12+R()*0.18), sr=H*(0.07+R()*0.04), bands=[3,4,6,8,10][L], bw=(W*0.75)/bands;
+    var skyH = sunset ? [52,38,22,350,320,285,255,235,225,220] : [205,205,208,210,212,215,218,220,222,225];
+    var layers=[2,3,3,4,5][L], ridge=[], base=[];
+    for(var i=0;i<layers;i++){ ridge.push(wave(R, 3+L)); base.push(hz - H*(0.08+0.22*(layers-1-i)/Math.max(1,layers-1))*(0.6+R()*0.5)); }
+    var nClouds=sunset?[0,1,2,3,4][L]:[1,2,3,4,5][L], clouds=[]; for(var c=0;c<nClouds;c++){ var cx=R()*W, cy=H*(0.1+R()*0.25), parts=[]; for(var p=0;p<4;p++) parts.push([cx+(p-1.5)*H*0.06+(R()-0.5)*8, cy+(R()-0.5)*6, H*(0.04+R()*0.03)]); clouds.push(parts); }
+    var trees=[]; if(!sea || R()<0.5){ var nt=[0,2,4,6,8][L]; for(var t=0;t<nt;t++) trees.push([R()*W, sea ? hz-H*(0.005+R()*0.03) : H*0.82+R()*H*0.12, H*(sea?0.06+R()*0.04:0.08+R()*0.07)]); }
+    var waveF=wave(R,2), fieldW=wave(R,2), mtHue=sunset?pick(R,[270,300,240]):pick(R,[210,150,120]), grass=pick(R,[100,120,85]);
+    function ridgeY(i, x){ var f=ridge[i](x/W*(0.9+i*0.3)); return base[i] - H*0.16*(0.5+0.5*f)*(1-i*0.08); }
+    var facet=[], slope=[]; for(var li=0; li<layers; li++){ var fa=[], sl=[], id=0, prevS=null; for(var xx=0; xx<=W; xx++){ var sg=ridgeY(li,xx+1)-ridgeY(li,xx)>0?1:0; if(prevS!==null && sg!==prevS) id++; prevS=sg; fa.push(id); sl.push(sg); } facet.push(fa); slope.push(sl); }
+    cv.paint(function(x, y){
+      // alberi davanti a tutto
+      for(var t=0;t<trees.length;t++){ var T=trees[t], dx=x-T[0], top=T[1]-T[2]*1.6;
+        if(y>top && y<T[1]){ var half=(y-top)/(T[1]-top)*T[2]*0.7, tier=Math.floor((y-top)/(T[1]-top)*3); var hw=half*(0.75+0.25*(((y-top)/(T[1]-top)*3)%1)); if(Math.abs(dx)<hw) return ['t'+t+'_'+tier+'_'+(dx<0?0:1), hsl(grass+20, 0.45, (dx<0?0.32:0.22)+tier*0.03)]; }
+        if(y>=T[1] && y<T[1]+T[2]*0.25 && Math.abs(dx)<T[2]*0.06) return ['tt'+t, hsl(25,0.45,0.28)]; }
+      if(sea && y>hz){ var j=Math.floor((y-hz)/((H-hz)/[3,4,6,8,10][L]) + 0.25*waveF(x/W*2+y/H)), refl=Math.abs(x-sx)<sr*1.6*(1-(y-hz)/(H-hz)*0.5) && (j%2===0);
+        var hc=skyH[Math.min(skyH.length-1, j+1)];
+        return ['s'+j+'_'+(refl?1:0), refl ? hsl(48, 0.9, 0.7) : hsl(sunset?hc:200+j*3, sunset?0.45:0.55, 0.52+0.04*(j%2)-j*0.035)]; }
+      // montagne (dalla più vicina)
+      for(var i=layers-1;i>=0;i--){ var ry=ridgeY(i,x); if(y>ry && (i===layers-1 || true)){ if(sea && y>hz) break;
+          var xi=Math.max(0, Math.min(W, Math.floor(x+(y-ry)*0.75))), shade=slope[i][xi], seg=facet[i][xi]; var far=(layers-1-i)/Math.max(1,layers-1);
+          if(i===layers-1 && !sea){ var fb=Math.floor((y-ry)/(H*[0.4,0.18,0.12,0.09,0.07][L]) + 0.6*fieldW(x/W)); return ['m'+i+'_f'+fb, hsl(grass+(fb%3)*12-10, 0.45+(fb%2)*0.1, 0.36+(fb%2)*0.1+ fb*0.015)]; }
+          return ['m'+i+'_'+shade+'_'+seg, hsl(mtHue+far*15, 0.25+0.2*(1-far), 0.62*far+0.22+0.1*(1-shade)*0.8 - shade*0.06)]; } }
+      if(Math.hypot(x-sx, y-sy)<sr) return ['sun'+(Math.hypot(x-sx,y-sy)<sr*0.6?0:1), hsl(sunset?45:52, 0.95, Math.hypot(x-sx,y-sy)<sr*0.6?0.72:0.63)];
+      for(var c=0;c<clouds.length;c++){ var cl=clouds[c]; for(var p=0;p<cl.length;p++){ if(Math.hypot(x-cl[p][0], (y-cl[p][1])*1.4)<cl[p][2]){ var low=y>cl[1][1]; return ['cl'+c+'_'+(low?1:0), sunset ? hsl(330, 0.5, low?0.62:0.78) : hsl(210, 0.15, low?0.82:0.95)]; } } }
+      var b=Math.floor(Math.hypot(x-sx, (y-sy)*1.3)/bw), ray=L>=3 ? Math.floor(((Math.atan2(y-sy,x-sx)+TAU)%TAU)/(TAU/[0,0,0,10,14][L])) : 0;
+      return ['k'+b+'_'+ray, hsl(skyH[Math.min(skyH.length-1,b)]+(ray%2)*4, sunset?0.75:0.6, (sunset?0.66:0.78)-b*0.025+(ray%2)*0.03)]; });
+    return cv; }
+
+  /* ---------- tema: fiori ---------- */
+  function fiori(R, L){ var S=200, cv=Canvas(S,S), nf=[1,2,3,4,5][L], fl=[];
+    var pet=pick(R,[[340,0],[20,40],[280,300],[45,55],[200,220],[320,350]]);
+    for(var i=0;i<nf;i++){ var rr=(nf===1?0.42:0.34/Math.sqrt(nf)+0.08)*(0.85+R()*0.3), tries=0, cx, cy;
+      do { cx=rr+R()*(1-2*rr); cy=rr+R()*(1-2*rr); tries++; } while(tries<60 && fl.some(function(f){ return Math.hypot(f.x-cx,f.y-cy)<(f.r+rr)*0.8; }));
+      fl.push({ x:cx, y:cy, r:rr, P:pick(R,[5,6,8,10,12]), rot:R()*TAU, two:L>=2 && R()<0.7, half:L>=3, hue:pet[0]+R()*(pet[1]-pet[0])+(R()<0.3?160:0), l:0.55+R()*0.12 }); }
+    var leaves=[]; fl.forEach(function(f){ var n=[1,2,2,3,3][L]; for(var j=0;j<n;j++){ var a=R()*TAU; leaves.push({ x:f.x+Math.cos(a)*f.r*1.05, y:f.y+Math.sin(a)*f.r*1.05, a:a, len:f.r*(0.7+R()*0.4), wid:f.r*0.28 }); } });
+    var bgN=[5,9,16,28,45][L], bg=[]; for(var b=0;b<bgN;b++) bg.push([R(), R()]); var bgHue=pick(R,[45,190,130,280,20]);
+    cv.paint(function(x, y){ var u=x/S, v=y/S, i;
+      for(i=fl.length-1;i>=0;i--){ var f=fl[i], dx=u-f.x, dy=v-f.y, r=Math.hypot(dx,dy)/f.r; if(r>1.02) continue; var th=(Math.atan2(dy,dx)-f.rot+TAU*4)%TAU;
+        if(r<0.16) return ['f'+i+'c', hsl(45, 0.9, 0.55)]; if(r<0.24 && L>=1) return ['f'+i+'cr', hsl(30, 0.7, 0.4)];
+        var t=th/TAU*f.P, k=Math.floor(t), tt=t-k, prof=Math.pow(Math.sin(tt*Math.PI), 0.55);
+        if(f.two){ var t2=t+0.5, k2=Math.floor(t2), tt2=t2-k2, prof2=Math.pow(Math.sin(tt2*Math.PI),0.55); if(r<0.62*prof2+0.22) return ['f'+i+'i'+(k2%f.P)+(f.half?(tt2<0.5?'a':'b'):''), hsl(f.hue+10, 0.7, f.l+0.15-(f.half&&tt2>=0.5?0.07:0))]; }
+        if(r<prof*0.98+0.02) return ['f'+i+'p'+k+(f.half?(tt<0.5?'a':'b'):''), hsl(f.hue, 0.72, f.l-(f.half&&tt>=0.5?0.08:0))]; }
+      for(i=0;i<leaves.length;i++){ var lf=leaves[i], ca=Math.cos(lf.a), sa=Math.sin(lf.a), lx=(u-lf.x)*ca+(v-lf.y)*sa, ly=-(u-lf.x)*sa+(v-lf.y)*ca;
+        if(lx>-lf.len*0.5 && lx<lf.len*0.5){ var w=lf.wid*Math.sqrt(Math.max(0,1-Math.pow(lx/(lf.len*0.5),2))); if(Math.abs(ly)<w) return ['l'+i+(ly<0?'a':'b'), hsl(115+(i%3)*10, 0.45, ly<0?0.42:0.33)]; } }
+      var bi=0, bd=9; for(var j=0;j<bg.length;j++){ var e=Math.hypot(bg[j][0]-u, bg[j][1]-v); if(e<bd){ bd=e; bi=j; } }
+      return ['g'+bi, hsl(bgHue+(bi%4)*8, 0.35, 0.86+(bi%3)*0.03)]; });
+    return cv; }
+
+  /* ---------- tema: geometrie ---------- */
+  function geometrie(R, L){ var S=200, cv=Canvas(S,S), kind=pick(R,['cubi','spirale','onde']), sc=scheme(R);
+    if(kind==='cubi'){ var s=[36,27,21,17,13][L];
+      cv.paint(function(x, y){ // griglia esagonale (punta in alto): ogni esagono è un cubo visto dall'alto, tre rombi
+        var fq=(Math.sqrt(3)/3*x - y/3)/s, fr=(2/3*y)/s, fs=-fq-fr, q=Math.round(fq), r=Math.round(fr), t=Math.round(fs), dq=Math.abs(q-fq), dr=Math.abs(r-fr), dt=Math.abs(t-fs);
+        if(dq>dr && dq>dt) q=-r-t; else if(dr>dt) r=-q-t;
+        var px=s*(Math.sqrt(3)*q+Math.sqrt(3)/2*r), py=s*1.5*r, ang=Math.atan2(y-py, x-px)*180/Math.PI;
+        var face = (ang>-150 && ang<=-30) ? 0 : (ang>-30 && ang<=90) ? 2 : 1;
+        var g=(px/S)*0.7+(py/S)*0.3, hue=sc.hs[0]+g*[200,170,140,120,110][L];
+        return ['h'+q+'_'+r+'_'+face, hsl(hue, 0.55, [0.74,0.52,0.36][face])]; });
+      return cv; }
+    if(kind==='spirale'){ var arms=[6,8,10,12,16][L], rings=[3,4,6,8,10][L], tw=0.5+R()*1.2;
+      cv.paint(function(x, y){ var u=x/S*2-1, v=y/S*2-1, r=Math.hypot(u,v), th=(Math.atan2(v,u)+TAU)%TAU;
+        if(r<0.09) return ['c', hsl(sc.hs[1], 0.8, 0.6)];
+        var lr=Math.log(r/0.09)/Math.log(1.45/0.09), ring=Math.floor(lr*rings), a=Math.floor(((th/TAU)*arms + lr*tw*arms*0.5)%arms+arms)%arms;
+        var par=(a+ring)%2; return ['s'+ring+'_'+a, hsl(sc.hs[par?1:0]+ring*(150/rings)+(a%3)*8, 0.55+0.1*(a%2), 0.36+par*0.24+ring*(0.12/rings))]; });
+      return cv; }
+    var nb=[3,4,6,8,10][L], nc=[3,4,6,8,10][L], f1=wave(R,2), f2=wave(R,2);
+    cv.paint(function(x, y){ var u=x/S, v=y/S, b=Math.floor((v+0.09*f1(u*1.3))*nb), c=Math.floor((u+0.09*f2(v*1.3))*nc), par=(b+c)%2;
+      return ['o'+b+'_'+c, hsl(sc.hs[par?2:0]+b*(160/nb)+c*(50/nc), 0.5+0.15*((b+2*c)%3)/2, 0.38+par*0.24+0.06*((b*c)%3))]; });
+    return cv; }
+
+  var GENS={ mandala:mandala, vetrata:vetrata, paesaggio:paesaggio, fiori:fiori, geometrie:geometrie };
+  function generate(theme, L, seed){ L=Math.max(0,Math.min(4,L|0)); var R=rng(seed); if(!GENS[theme]) theme=THEMES[Math.floor(R()*THEMES.length)];
+    var cv=GENS[theme](R, L); return finish(cv, L, seed, theme); }
+
+  /* ---------- da una foto ---------- */
+  // rgba: array di byte (r,g,b,a…) già rimpicciolito (lato lungo circa 200 pixel)
+  function fromPixels(rgba, w, h, K, L, seed){ L=Math.max(0,Math.min(4,L|0)); K=K||LEVELS[L].k;
+    var n=w*h, P=new Array(n), i; for(i=0;i<n;i++){ var a=rgba[i*4+3]/255; P[i]=[ (rgba[i*4]/255)*a+(1-a), (rgba[i*4+1]/255)*a+(1-a), (rgba[i*4+2]/255)*a+(1-a) ]; }
+    // tavolozza dalla foto: k-medie su un campione di pixel
+    var step=Math.max(1, Math.floor(n/6000)), sample=[], wts=[]; for(i=0;i<n;i+=step){ sample.push(P[i]); wts.push(1); }
+    var q=quantize(sample, wts, K, seed||11, 5), PL=q.pal.map(function(hx){ return toLab(unhex(hx)); });
+    var idx=new Int32Array(n); for(i=0;i<n;i++){ var Lb=toLab(P[i]), bj=0, bd=1e9; for(var j=0;j<PL.length;j++){ var e=Math.pow(Lb[0]-PL[j][0],2)+Math.pow(Lb[1]-PL[j][1],2)+Math.pow(Lb[2]-PL[j][2],2); if(e<bd){ bd=e; bj=j; } } idx[i]=bj; }
+    // filtro della moda 3×3, due volte: toglie i puntini isolati
+    var cnt=new Int32Array(64); for(var pass=0; pass<2; pass++){ var nx=new Int32Array(n); for(var y=0;y<h;y++) for(var x=0;x<w;x++){ var me=idx[y*w+x], best=me, bc=0, dy, dx, xx, yy, v; for(dy=-1;dy<=1;dy++) for(dx=-1;dx<=1;dx++){ xx=x+dx; yy=y+dy; if(xx<0||yy<0||xx>=w||yy>=h) continue; v=idx[yy*w+xx]; cnt[v]++; if(cnt[v]>bc || (cnt[v]===bc && v===me)){ bc=cnt[v]; best=v; } } for(dy=-1;dy<=1;dy++) for(dx=-1;dx<=1;dx++){ xx=x+dx; yy=y+dy; if(xx<0||yy<0||xx>=w||yy>=h) continue; cnt[idx[yy*w+xx]]=0; } nx[y*w+x]=best; } idx=nx; }
+    var cols=q.pal.map(unhex), cv={ w:w, h:h, lab:idx, cols:cols };
+    var lv=LEVELS[L], sp=splitComponents(w, h, cv.lab, cv.cols), mg=mergeSmall(w, h, sp.lab, sp.cols, lv.rmin*0.9, 1);
+    // ogni zona tiene il colore della tavolozza da cui viene
+    var palIdx={}; q.pal.forEach(function(hx, k){ palIdx[hex(unhex(hx))]=k; });
+    var used={}, rc=mg.cols.map(function(c){ var k=palIdx[hex(c)]; used[k]=1; return k; }), keep=Object.keys(used).map(Number).sort(function(a,b){ return a-b; }), re={}; keep.forEach(function(k,i2){ re[k]=i2; });
+    return { theme:'foto', level:L, w:w, h:h, rle:encode(mg.lab), rc:rc.map(function(k){ return re[k]; }), pal:keep.map(function(k){ return q.pal[k]; }), seed:seed||0 }; }
+
+  /* ---------- geometria: contorni lisci, linee e posto dei numeri ---------- */
+  function dp(pts, eps){ if(pts.length<3) return pts; var a=pts[0], b=pts[pts.length-1], dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, mi=0, md=0;
+    var same=Math.hypot(dx,dy)<1e-9; for(var i=1;i<pts.length-1;i++){ var d=same ? Math.hypot(pts[i][0]-a[0], pts[i][1]-a[1]) : Math.abs((pts[i][0]-a[0])*dy-(pts[i][1]-a[1])*dx)/L; if(d>md){ md=d; mi=i; } }
+    if(md<=eps) return [a,b]; var l=dp(pts.slice(0,mi+1),eps), r=dp(pts.slice(mi),eps); return l.slice(0,-1).concat(r); }
+  function chaikinOpen(p, it){ for(var k=0;k<it;k++){ if(p.length<3) return p; var q=[p[0]]; for(var i=0;i<p.length-1;i++){ var a=p[i], b=p[i+1]; q.push([a[0]*0.75+b[0]*0.25, a[1]*0.75+b[1]*0.25],[a[0]*0.25+b[0]*0.75, a[1]*0.25+b[1]*0.75]); } q.push(p[p.length-1]); p=q; } return p; }
+  function chaikinClosed(p, it){ for(var k=0;k<it;k++){ var q=[]; for(var i=0;i<p.length;i++){ var a=p[i], b=p[(i+1)%p.length]; q.push([a[0]*0.75+b[0]*0.25, a[1]*0.75+b[1]*0.25],[a[0]*0.25+b[0]*0.75, a[1]*0.25+b[1]*0.75]); } p=q; } return p; }
+  function geometry(d, unit){ var w=d.w, h=d.h, lab=decode(d.rle, w, h), U=unit||(640/Math.max(w,h)), nreg=d.rc.length;
+    function L(x, y){ return (x<0||y<0||x>=w||y>=h) ? -1 : lab[y*w+x]; }
+    // lati di confine: orizzontali H[y][x] tra (x,y-1) e (x,y); verticali V[y][x] tra (x-1,y) e (x,y)
+    var CW=w+1, deg=new Uint8Array((w+1)*(h+1));
+    function hE(x, y){ return L(x,y-1)!==L(x,y); } function vE(x, y){ return L(x-1,y)!==L(x,y); }
+    var x, y; for(y=0;y<=h;y++) for(x=0;x<=w;x++){ var c=0; if(x<w && hE(x,y)) c++; if(x>0 && hE(x-1,y)) c++; if(y<h && vE(x,y)) c++; if(y>0 && vE(x,y-1)) c++; deg[y*CW+x]=c; }
+    var junction=function(x, y){ var c=deg[y*CW+x]; if(c!==2) return c>0; // due lati: è un nodo solo se ci sono 3 o più zone intorno
+      var s={}; s[L(x-1,y-1)]=1; s[L(x,y-1)]=1; s[L(x-1,y)]=1; s[L(x,y)]=1; return Object.keys(s).length>2; };
+    var usedH=new Uint8Array((w+1)*(h+1)), usedV=new Uint8Array((w+1)*(h+1)), chains=[];
+    // passo da un vertice lungo un lato non ancora usato; restituisce [nuovo x, nuovo y, sinistra, destra] o null
+    function stepFrom(x, y, dir){ // dir: 0 destra, 1 giù, 2 sinistra, 3 su
+      if(dir===0 && x<w && hE(x,y) && !usedH[y*CW+x]){ usedH[y*CW+x]=1; return [x+1,y, L(x,y-1), L(x,y)]; }
+      if(dir===2 && x>0 && hE(x-1,y) && !usedH[y*CW+x-1]){ usedH[y*CW+x-1]=1; return [x-1,y, L(x-1,y), L(x-1,y-1)]; }
+      if(dir===1 && y<h && vE(x,y) && !usedV[y*CW+x]){ usedV[y*CW+x]=1; return [x,y+1, L(x,y), L(x-1,y)]; }
+      if(dir===3 && y>0 && vE(x,y-1) && !usedV[(y-1)*CW+x]){ usedV[(y-1)*CW+x]=1; return [x,y-1, L(x-1,y-1), L(x,y-1)]; }
+      return null; }
+    function walk(x0, y0, dir0){ var s=stepFrom(x0,y0,dir0); if(!s) return null; var pts=[[x0,y0],[s[0],s[1]]], left=s[2], right=s[3], x=s[0], y=s[1], prev=dir0;
+      while(!(x===x0 && y===y0) && !junction(x,y)){ var nx=null; for(var dd=0; dd<4 && !nx; dd++){ var dir=(prev+3+dd)%4; if(dir===(prev+2)%4) continue; var t=stepFrom(x,y,dir); if(t){ if(t[2]!==left || t[3]!==right){ // la zona cambia: torno indietro (non dovrebbe succedere senza un nodo)
+              if(dir===0) usedH[y*CW+x]=0; else if(dir===2) usedH[y*CW+x-1]=0; else if(dir===1) usedV[y*CW+x]=0; else usedV[(y-1)*CW+x]=0; continue; } nx=t; prev=dir; } }
+        if(!nx) break; x=nx[0]; y=nx[1]; pts.push([x,y]); }
+      return { pts:pts, left:left, right:right, closed:(x===x0 && y===y0) && !junction(x0,y0) }; }
+    for(y=0;y<=h;y++) for(x=0;x<=w;x++){ if(!deg[y*CW+x] || !junction(x,y)) continue; for(var dir=0;dir<4;dir++){ var ch; while((ch=walk(x,y,dir))) chains.push(ch); } }
+    // anelli senza nodi (un'isola dentro una sola zona)
+    for(y=0;y<=h;y++) for(x=0;x<w;x++){ if(hE(x,y) && !usedH[y*CW+x]){ var c2=walk(x,y,0); if(c2){ c2.closed=true; chains.push(c2); } } }
+    // semplifica e liscia (gli estremi restano fermi: le zone vicine combaciano)
+    chains.forEach(function(c){ var p=c.pts.map(function(q){ return [q[0]*U, q[1]*U]; });
+      var border = c.left===-1 || c.right===-1;
+      if(c.closed){ p=p.slice(0,-1); var simp=dp(p.concat([p[0]]), U*0.55).slice(0,-1); c.sm = simp.length>=3 ? chaikinClosed(simp, 2) : p; }
+      else { var s2 = border ? dp(p, U*0.05) : dp(p, U*0.55); c.sm = border ? s2 : chaikinOpen(s2, 2); } });
+    function fmt(q){ return (Math.round(q[0]*10)/10)+' '+(Math.round(q[1]*10)/10); }
+    // contorno di ogni zona: i pezzi di catena orientati con la zona a sinistra
+    var per=[]; for(var r=0;r<nreg;r++) per.push([]);
+    chains.forEach(function(c, ci){ if(c.left>=0) per[c.left].push({ c:ci, rev:false }); if(c.right>=0) per[c.right].push({ c:ci, rev:true }); });
+    var paths=per.map(function(list){ var out='', pieces=list.map(function(it){ var p=chains[it.c].sm; p=it.rev?p.slice().reverse():p; return { p:p, closed:chains[it.c].closed, used:false }; });
+      var key=function(q){ return Math.round(q[0]*4)+'_'+Math.round(q[1]*4); }, starts={};
+      pieces.forEach(function(pc, i){ if(pc.closed) return; var k=key(pc.p[0]); (starts[k]=starts[k]||[]).push(i); });
+      pieces.forEach(function(pc){ if(pc.used) return; pc.used=true; var loop=pc.p.slice();
+        if(!pc.closed){ var guard=0; while(guard++<5000){ var k=key(loop[loop.length-1]), nxt=(starts[k]||[]).filter(function(i){ return !pieces[i].used; })[0]; if(nxt===undefined) break; pieces[nxt].used=true; loop=loop.concat(pieces[nxt].p.slice(1)); } }
+        out+='M'+loop.map(fmt).join('L')+'Z'; });
+      return out; });
+    // linee del disegno: ogni catena una volta sola (i bordi dell'immagine a parte)
+    var lines='', frame=''; chains.forEach(function(c){ var s='M'+c.sm.map(fmt).join('L')+(c.closed?'Z':''); if(c.left===-1||c.right===-1) frame+=s; else lines+=s; });
+    // posto e grandezza dei numeri: il punto più lontano dai bordi della zona
+    var D=distField(w,h,lab), best=new Float32Array(nreg), bx=new Float32Array(nreg), by=new Float32Array(nreg), area=new Int32Array(nreg);
+    for(y=0;y<h;y++) for(x=0;x<w;x++){ var i=y*w+x, rr=lab[i]; area[rr]++; if(D[i]>best[rr]){ best[rr]=D[i]; bx[rr]=x+0.5; by[rr]=y+0.5; } }
+    var labels=[]; for(var k=0;k<nreg;k++) labels.push({ x:bx[k]*U, y:by[k]*U, fs:Math.max(7, Math.min(26, best[k]*U*1.25)), r:best[k], a:area[k] });
+    return { W:w*U, H:h*U, U:U, paths:paths, lines:lines, frame:frame, labels:labels, nreg:nreg }; }
+
+  // statistiche per il controllo della parte Crea
+  function stats(d){ var lab=decode(d.rle, d.w, d.h), D=distField(d.w,d.h,lab), best=new Float32Array(d.rc.length); for(var i=0;i<lab.length;i++) if(D[i]>best[lab[i]]) best[lab[i]]=D[i];
+    var minR=Infinity; for(var k=0;k<best.length;k++) minR=Math.min(minR,best[k]);
+    var close=[]; for(var a=0;a<d.pal.length;a++) for(var b=a+1;b<d.pal.length;b++){ var e=dE(d.pal[a], d.pal[b]); if(e<7) close.push([a,b,e]); }
+    var usedC={}; d.rc.forEach(function(c){ usedC[c]=1; });
+    return { regions:d.rc.length, colors:d.pal.length, unused:d.pal.map(function(_,k){ return k; }).filter(function(k){ return !usedC[k]; }), minR:minR, close:close }; }
+  // nuova tavolozza armonica con lo stesso numero di colori (stesso disegno)
+  function repaint(d, seed){ var R=rng(seed), sc=scheme(R), n=d.pal.length, Ls=d.pal.map(function(h){ return toLab(unhex(h))[0]; });
+    var order=Ls.map(function(l,i){ return [l,i]; }).sort(function(a,b){ return a[0]-b[0]; }), pal=d.pal.slice();
+    order.forEach(function(o, j){ var hue=sc.hs[j%sc.hs.length]+(R()-0.5)*16, l=0.28+0.6*(j/Math.max(1,n-1)); pal[o[1]]=hex(hsl(hue, 0.45+R()*0.35, l)); });
+    return pal; }
+  return { LEVELS:LEVELS, THEMES:THEMES, THEME_NAMES:THEME_NAMES, generate:generate, fromPixels:fromPixels, geometry:geometry, decode:decode, encode:encode,
+    stats:stats, repaint:repaint, colorName:colorName, names:names, dE:dE, hex:hex, unhex:unhex, hsl:hsl, _merge:mergeSmall, _split:splitComponents, _dist:distField };
+})();
+
+/* ===================== COPIA CON LA GRIGLIA: il motore delle figure a punti =====================
+   Una figura è un insieme di segmenti tra punti vicini di una griglia n×n (in orizzontale, in verticale
+   e, dal livello Facile, in diagonale). Ogni segmento è una coppia di indici di punto "a-b" con a<b.
+   Le figure si creano ogni volta da zero: un cammino casuale con qualche ramo, spesso simmetrico. */
+var CopiaCore=(function(){
+  function rng(seed){ var s=((Math.imul((seed>>>0)||1, 2654435761)>>>0) ^ 0x85EBCA6B)>>>0 || 1, f=function(){ s^=s<<13; s>>>=0; s^=s>>>17; s^=s<<5; s>>>=0; return s/4294967296; }; for(var i=0;i<6;i++) f(); return f; }
+  // livelli: punti per lato, segmenti (circa), diagonali, simmetria, copia a specchio
+  var LEVELS=[ { n:4, k:6, diag:false, sym:0.8, mirror:false }, { n:5, k:9, diag:true, sym:0.7, mirror:false }, { n:6, k:13, diag:true, sym:0.5, mirror:false }, { n:7, k:18, diag:true, sym:0.4, mirror:false }, { n:7, k:16, diag:true, sym:0, mirror:true } ];
+  function key(a, b){ return a<b ? a+'-'+b : b+'-'+a; }
+  function pts(k){ return k.split('-').map(Number); }
+  // un segmento lungo da a a b (in linea retta, anche diagonale) diventa una serie di segmenti unitari
+  function line(n, a, b){ var r0=Math.floor(a/n), c0=a%n, r1=Math.floor(b/n), c1=b%n, dr=r1-r0, dc=c1-c0;
+    if(!(dr===0 || dc===0 || Math.abs(dr)===Math.abs(dc)) || (dr===0 && dc===0)) return null;
+    var st=Math.max(Math.abs(dr), Math.abs(dc)), sr=dr/st, sc=dc/st, out=[];
+    for(var i=0;i<st;i++){ var p=(r0+sr*i)*n+(c0+sc*i), q=(r0+sr*(i+1))*n+(c0+sc*(i+1)); out.push(key(p,q)); } return out; }
+  // due diagonali che si incrociano nello stesso quadretto si confondono: si evitano
+  function crosses(set, n, k){ var p=pts(k), r0=Math.floor(p[0]/n), c0=p[0]%n, r1=Math.floor(p[1]/n), c1=p[1]%n; if(r0===r1 || c0===c1) return false;
+    var other=key(r0*n+c1, r1*n+c0); return !!set[other]; }
+  function mirrorKey(n, k){ var p=pts(k).map(function(i){ var r=Math.floor(i/n), c=i%n; return r*n+(n-1-c); }); return key(p[0], p[1]); }
+  function make(L, seed){ L=Math.max(0, Math.min(4, L|0)); var lv=LEVELS[L], n=lv.n, R=rng(seed), sym=R()<lv.sym;
+    for(var tries=0; tries<200; tries++){ var set={}, count=0, nodes={}, cur=Math.floor(R()*n)*n + Math.floor(R()*(sym?Math.ceil(n/2):n));
+      var dirs=lv.diag ? [[0,1],[1,0],[0,-1],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]] : [[0,1],[1,0],[0,-1],[-1,0]];
+      nodes[cur]=1; var guard=0;
+      while(count<lv.k && guard++<400){ var r=Math.floor(cur/n), c=cur%n, opts=dirs.map(function(d){ return [r+d[0], c+d[1]]; }).filter(function(q){ return q[0]>=0 && q[1]>=0 && q[0]<n && q[1]<n; });
+        // a volte riparte da un punto già toccato (un ramo)
+        if(R()<0.25){ var ks=Object.keys(nodes); cur=+ks[Math.floor(R()*ks.length)]; continue; }
+        var q=opts[Math.floor(R()*opts.length)], nx=q[0]*n+q[1], k=key(cur,nx);
+        if(sym && q[1]>Math.floor(n/2)){ continue; }
+        if(set[k] || crosses(set, n, k)) { if(R()<0.3 && nodes[nx]) cur=nx; continue; }
+        set[k]=1; count++; if(sym){ var mk=mirrorKey(n,k); if(mk!==k && !set[mk] && !crosses(set,n,mk)){ set[mk]=1; count++; } }
+        nodes[nx]=1; cur=nx; }
+      var segs=Object.keys(set).sort();
+      // allo specchio, una figura simmetrica non servirebbe: la copia sarebbe uguale al modello
+      if(lv.mirror && segs.map(function(k){ return mirrorKey(n,k); }).sort().join()===segs.join()) continue;
+      if(segs.length>=Math.max(3, lv.k-3) && connected(n, segs) && spread(n, segs)) return { n:n, seg:segs, mirror:lv.mirror, level:L, seed:seed, kind:'punti' };
+    }
+    return null; }
+  function connected(n, segs){ var adj={}; segs.forEach(function(k){ var p=pts(k); (adj[p[0]]=adj[p[0]]||[]).push(p[1]); (adj[p[1]]=adj[p[1]]||[]).push(p[0]); });
+    var start=Object.keys(adj)[0], seen={}; seen[start]=1; var st=[+start]; while(st.length){ var v=st.pop(); (adj[v]||[]).forEach(function(w){ if(!seen[w]){ seen[w]=1; st.push(w); } }); }
+    return Object.keys(seen).length===Object.keys(adj).length; }
+  // la figura deve occupare buona parte della griglia (non tutta in un angolo)
+  function spread(n, segs){ var r0=n, r1=0, c0=n, c1=0; segs.forEach(function(k){ pts(k).forEach(function(i){ var r=Math.floor(i/n), c=i%n; r0=Math.min(r0,r); r1=Math.max(r1,r); c0=Math.min(c0,c); c1=Math.max(c1,c); }); });
+    return (r1-r0)>=n-2 && (c1-c0)>=n-2; }
+  // la soluzione attesa: la figura, oppure la sua immagine allo specchio
+  function target(d){ return d.mirror ? d.seg.map(function(k){ return mirrorKey(d.n, k); }).sort() : d.seg.slice().sort(); }
+  function compare(d, user){ var T={}, U={}, ok=0, extra=0, miss=0; target(d).forEach(function(k){ T[k]=1; }); (user||[]).forEach(function(k){ U[k]=1; });
+    Object.keys(U).forEach(function(k){ if(T[k]) ok++; else extra++; }); Object.keys(T).forEach(function(k){ if(!U[k]) miss++; }); return { ok:ok, extra:extra, miss:miss, total:Object.keys(T).length }; }
+  return { LEVELS:LEVELS, make:make, line:line, key:key, pts:pts, target:target, compare:compare, mirrorKey:mirrorKey, connected:connected };
+})();
+
 
 if (typeof module !== 'undefined') module.exports = { MazeCore: MazeCore, MandalaCore: MandalaCore, WordCore: WordCore, SudokuCore: SudokuCore, NonoCore: NonoCore, MagicCore: MagicCore, TangramCore: TangramCore, makeRng: makeRng, DictCore: DictCore, FillCore: FillCore, MahjongCore: MahjongCore, LogicCore: LogicCore, SquaresCore: SquaresCore, RankCore: RankCore, SudokuX: SudokuX, KakuroCore: KakuroCore };
 </script>
@@ -1424,6 +1877,9 @@ var ICO = {
   sudoku:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6h40v40H6zM19 6v40M32 6v40M6 19h40M6 32h40"/><circle cx="12.5" cy="12.5" r="3" fill="currentColor"/><path d="M36 22h6v6h-6z" fill="currentColor"/></svg>',
   crucipixel:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="6" y="6" width="40" height="40" rx="3"/><path d="M16 16h10v10H16zM26 26h10v10H26z" fill="currentColor"/></svg>',
   quadrati:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6h40v40H6zM19 6v40M32 6v40M6 19h40M6 32h40"/><path d="M8 44 44 8" stroke-dasharray="3 4"/></svg>',
+  copia:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 8h18v18H4zM30 8h18v18H30z" stroke-width="1.6" stroke-dasharray="2 3"/><path d="M8 22l5-10 5 10M34 22l5-10 5 10" stroke-width="3"/><path d="M14 38h24M30 32l8 6-8 6"/></svg>',
+  colora:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M6 6h40v40H6zM6 26c10-6 18 6 40-4M24 6c-4 10 6 16 2 40"/><text x="13" y="19" font-size="9" fill="currentColor" stroke="none">1</text><text x="34" y="18" font-size="9" fill="currentColor" stroke="none">2</text><text x="13" y="40" font-size="9" fill="currentColor" stroke="none">3</text><text x="34" y="40" font-size="9" fill="currentColor" stroke="none">2</text></svg>',
+  arte:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M26 6C14 6 6 15 6 26s8 20 18 20c3 0 4-2 3-4-2-3 0-6 3-6h6c6 0 10-4 10-10C46 13 37 6 26 6z"/><circle cx="16" cy="24" r="3"/><circle cx="22" cy="15" r="3"/><circle cx="32" cy="15" r="3"/><circle cx="38" cy="24" r="3"/></svg>',
   ponti:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="6"/><circle cx="40" cy="12" r="6"/><circle cx="12" cy="40" r="6"/><path d="M18 10h16M18 14h16M12 18v16"/></svg>',
   cifrato:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6h40v40H6zM19 6v40M32 6v40M6 19h40M6 32h40"/><text x="9" y="16" font-size="8" fill="currentColor" stroke="none">7</text><text x="22" y="16" font-size="8" fill="currentColor" stroke="none">3</text><text x="35" y="29" font-size="8" fill="currentColor" stroke="none">12</text></svg>',
   kakuro:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6h40v40H6zM19 6v40M32 6v40M6 19h40M6 32h40"/><path d="M6 6h13v13H6z" fill="currentColor" opacity=".5"/><path d="M6 6l13 13"/></svg>',
@@ -1456,11 +1912,15 @@ var ICO = {
 
 /* ---------- catalogo ---------- */
 var FAMILIES = [
-  { name:'Disegno e spazio', hint:'non serve leggere né contare', tools:[
-    { id:'labirinti', name:'Labirinti', ev:'plausibile', text:'Disegna il percorso su una griglia: l’app controlla che ci sia una strada fino all’uscita.' },
+  { name:'Arte e benessere', hint:'colorare e disegnare con calma: che cosa dicono gli studi è nella pagina qui sotto', tools:[
+    { id:'colora', name:'Colorare con i numeri', ev:'plausibile', text:'Disegni sempre nuovi (mandala, vetrate, paesaggi, fiori, geometrie) o una tua foto, divisi in zone con il numero del colore.' },
+    { id:'copia', name:'Copia con la griglia', ev:'plausibile', text:'Figure da ricopiare su una griglia di punti (anche allo specchio), oppure un disegno o una tua immagine da copiare e ingrandire quadretto per quadretto.' },
     { id:'mandala', name:'Mandala e simmetria', ev:'promettente', text:'Disegni in uno spicchio, il mandala si ripete da solo tutto intorno.' },
     { id:'motivi', name:'Disegno meditativo a motivi', ev:'promettente', text:'Riquadri da riempire con motivi semplici ripetuti, senza gomma.' },
     { id:'linee', name:'Linee libere', ev:'plausibile', text:'Disegno lento a linee libere, incroci arrotondati e zone colorate con un tocco.' },
+    { id:'arte', name:'Arte e benessere: che cosa dicono gli studi', ev:'', text:'Colorare, disegnare, arteterapia: i risultati delle ricerche, i limiti, i consigli sui colori e sui materiali.' } ]},
+  { name:'Disegno e spazio', hint:'non serve leggere né contare', tools:[
+    { id:'labirinti', name:'Labirinti', ev:'plausibile', text:'Disegna il percorso su una griglia: l’app controlla che ci sia una strada fino all’uscita.' },
     { id:'differenze', name:'Trova le differenze', ev:'plausibile', text:'Disegni una scena, l’app la copia: tu cambi qualche particolare.' },
     { id:'puntini', name:'Unisci i puntini', ev:'plausibile', text:'Metti i punti in ordine: l’app li numera e controlla la figura.' },
     { id:'tangram', name:'Tangram', ev:'plausibile', text:'Componi una figura con i sette pezzi e stampala come sagoma da riempire.' }, ]},
@@ -1517,7 +1977,7 @@ function route(){
   if(current && current.destroy) current.destroy();
   current = null;
   var h = (location.hash||'#home').slice(1);
-  document.querySelectorAll('[data-nav]').forEach(function(a){ var nk=(h==='gioca'||h.indexOf('p-')===0||h.indexOf('gioca=')===0)?'gioca':(h==='home'||h==='inizio'||h==='enigmi'||h.indexOf('impara-')===0)?'home':(h==='crea'||h==='labirinti'||h==='mandala'||(window.TOOLS&&TOOLS[h]))?'crea':h; var on = a.dataset.nav===nk; if(on) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+  document.querySelectorAll('[data-nav]').forEach(function(a){ var nk=(h==='gioca'||h.indexOf('p-')===0||h.indexOf('gioca=')===0)?'gioca':(h==='home'||h==='inizio'||h==='enigmi'||h==='arte'||h.indexOf('impara-')===0)?'home':(h==='crea'||h==='labirinti'||h==='mandala'||(window.TOOLS&&TOOLS[h]))?'crea':h; var on = a.dataset.nav===nk; if(on) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
   window.scrollTo(0,0);
   if(h==='labirinti') current = MazeTool();
   else if(h==='mandala') current = MandalaTool();
@@ -1532,6 +1992,7 @@ function route(){
   else if(h==='matto'||h==='labgioca'||h==='tangioca'){ location.replace('#'+({ matto:'scacchi', labgioca:'labirinti', tangioca:'tangram' })[h]); return; }
   else if(h.indexOf('impara-')===0) Percorso.page(h.slice(7));
   else if(h==='enigmi') Enigmi.page();
+  else if(h==='arte') Arte.page();
   else Percorso.home();
   setupZoom();
   if(window.Rules) Rules.attach(h);
@@ -1548,12 +2009,12 @@ function renderHome(){
   FAMILIES.forEach(function(f){
     html += '<section class="family"><h2>'+f.name+' <small>'+f.hint+'</small></h2><div class="tools">';
     f.tools.forEach(function(t){
-      var inner = ICO[t.id] + '<h3>'+t.name+'</h3><p>'+t.text+'</p><div class="row">'+evChip(t.ev)+(t.soon?'<span class="chip">In arrivo</span>':'')+'</div>';
+      var inner = ICO[t.id] + '<h3>'+t.name+'</h3><p>'+t.text+'</p><div class="row">'+(t.ev?evChip(t.ev):'')+(t.soon?'<span class="chip">In arrivo</span>':'')+'</div>';
       html += t.soon ? '<div class="tool soon" aria-disabled="true">'+inner+'</div>' : '<a class="tool" href="#'+t.id+'">'+inner+'</a>';
     });
     html += '</div></section>';
   });
-  html += '</div><p class="note">Le etichette (studi controllati, studi preliminari, per analogia) dicono che tipo di studi esiste oggi su ciascun tipo di gioco. Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.15.</p>';
+  html += '</div><p class="note">Le etichette (studi controllati, studi preliminari, per analogia) dicono che tipo di studi esiste oggi su ciascun tipo di gioco. Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.21.</p>';
   app.innerHTML = html;
 }
 
@@ -7508,6 +7969,248 @@ M.render=function(ctx){ var d=ctx.d; render0(ctx); if(!d.trace) return; var keys
   add+='</g>'; var first=svg.querySelector('g[clip-path]'); var tmp=document.createElementNS('http://www.w3.org/2000/svg','g'); tmp.innerHTML=add; svg.insertBefore(tmp.firstChild, first); };
 })();
 
+/* ===================== COLORARE CON I NUMERI: gioco sullo schermo, Crea e stampa =====================
+   Tre modi di colorare (dagli studi: serve la giusta dose di struttura, non troppa e non troppo poca):
+   - «Con i numeri»: ogni zona ha il suo colore, indicato dal numero;
+   - «Colori miei»: le zone con lo stesso numero hanno lo stesso colore, ma il colore lo scegli tu;
+   - «Libero»: nessun numero, ogni zona del colore che vuoi (come nei mandala da colorare degli studi). */
+var ColoraView=(function(){
+  var FREE=['#e53935','#f4511e','#fb8c00','#fdd835','#c0ca33','#7cb342','#43a047','#00897b','#00acc1','#039be5','#1e88e5','#3949ab','#5e35b1','#8e24aa','#d81b60','#f48fb1','#ffccbc','#fff59d','#c5e1a5','#b2ebf2','#bbdefb','#d1c4e9','#8d6e63','#5d4037','#9e9e9e','#424242'];
+  var HL='#d4d4d4', cache={ key:null, g:null };
+  function geom(d){ var k=d.w+'x'+d.h+':'+d.rle.length+':'+d.rle.slice(0,60)+d.rle.slice(-60); if(cache.key!==k){ cache.key=k; cache.g=ColoraCore.geometry(d); } return cache.g; }
+  function colOf(d, k){ return (d.mode==='mine' && d.my && d.my[k]) ? d.my[k] : d.pal[k]; }
+  // o: { print, sol, play }
+  function svg(d, o){ o=o||{}; var g=geom(d), mode=d.mode||'num', s='<svg class="main colsvg" viewBox="-2 -2 '+(g.W+4)+' '+(g.H+4)+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Disegno da colorare">';
+    var nums=!o.sol && mode!=='free', thin=d.theme==='vetrata'?2.4:1.1;
+    for(var i=0;i<g.nreg;i++){ var fill='#ffffff';
+      if(o.sol) fill=d.pal[d.rc[i]];
+      else if(o.play){ if(mode==='free'){ if(d.ff && d.ff[i]>=0) fill=FREE[d.ff[i]]; } else if(d.f && d.f[i]>=0) fill=colOf(d, d.f[i]); else if(d.hl!==false && d.rc[i]===d.sel) fill=HL; }
+      s+='<path data-r="'+i+'" d="'+g.paths[i]+'" fill="'+fill+'" fill-rule="evenodd"/>'; }
+    s+='<path d="'+g.lines+'" fill="none" stroke="'+(o.print?'#3a3a3a':'#555')+'" stroke-width="'+(o.print?thin*0.9:thin)+'" stroke-linejoin="round" pointer-events="none"/>';
+    s+='<path d="'+g.frame+'" fill="none" stroke="#3a3a3a" stroke-width="1.6" pointer-events="none"/>';
+    if(nums){ for(var j=0;j<g.nreg;j++){ if(o.play && d.f && d.f[j]>=0) continue; var L=g.labels[j], on=o.play && d.hl!==false && d.rc[j]===d.sel;
+        s+='<text x="'+L.x.toFixed(1)+'" y="'+L.y.toFixed(1)+'" font-size="'+L.fs.toFixed(1)+'" text-anchor="middle" dominant-baseline="central" font-family="'+FONT+'" fill="'+(on?'#000':o.print?'#444':'#6b6b6b')+'"'+(on?' font-weight="700"':'')+' pointer-events="none">'+(d.rc[j]+1)+'</text>'; } }
+    return s+'</svg>'; }
+  function legend(d, blank){ var nm=ColoraCore.names(d.pal.map(function(c,k){ return colOf(d,k); })); return '<ul class="collegend">'+d.pal.map(function(c, k){ var col=blank?'#fff':colOf(d,k); return '<li><svg viewBox="0 0 30 22" width="34" height="25" aria-hidden="true"><rect x="1" y="1" width="28" height="20" rx="4" fill="'+col+'" stroke="#444" stroke-width="1.5"/></svg><b>'+(k+1)+'</b> '+(blank?'<span class="evidence">scegli tu</span>':esc(nm[k]))+'</li>'; }).join('')+'</ul>'; }
+  function remaining(d){ var n=0, byC={}; for(var i=0;i<d.rc.length;i++){ if(d.mode==='free'){ if(!(d.ff[i]>=0)) n++; } else if(d.f[i]!==d.rc[i]){ n++; byC[d.rc[i]]=(byC[d.rc[i]]||0)+1; } } return { n:n, byC:byC }; }
+  function prepare(d){ var n=d.rc.length; if(!d.f || d.f.length!==n) d.f=d.rc.map(function(){ return -1; }); if(!d.ff || d.ff.length!==n) d.ff=d.rc.map(function(){ return -1; }); if(!d.my || d.my.length!==d.pal.length) d.my=d.pal.slice(); if(d.sel==null) d.sel=0; if(d.fsel==null) d.fsel=0; d.mode=d.mode||'num'; if(d.hl==null) d.hl=true; }
+  // fonti di immagini libere da diritti, controllate l'8 novembre 2026 sui siti dei musei
+  var SOURCES=[
+    ['Metropolitan Museum di New York (Open Access)','https://www.metmuseum.org/en/policies/image-resources','licenza CC0: libere anche per l’uso commerciale. Dipinti, stampe giapponesi, disegni.'],
+    ['Art Institute of Chicago','https://www.artic.edu/open-access/open-access-images','licenza CC0: libere anche per l’uso commerciale.'],
+    ['Cleveland Museum of Art','https://clevelandart.org/open-access','licenza CC0 per le opere di pubblico dominio.'],
+    ['National Gallery of Art di Washington','https://www.nga.gov/artworks/free-images-and-open-access','immagini delle opere di pubblico dominio gratuite per qualunque uso, anche commerciale.'],
+    ['Paris Musées (i musei della città di Parigi)','https://parismusees.paris.fr/en/actualite/open-content-150000-works-from-the-museum-collections-of-the-city-of-paris-freely','licenza CC0, anche per l’uso commerciale.'],
+    ['Biodiversity Heritage Library su Flickr','https://blog.biodiversitylibrary.org/2021/02/250000-free-nature-images-flickr','illustrazioni antiche di fiori, piante e animali, libere da scaricare e riusare; per la vendita controlla i diritti indicati per ogni immagine.'] ];
+  function sources(compact){ return (compact?'<details class="imgsrc"><summary>Dove trovare immagini libere da diritti</summary>':'')+
+    '<ul class="srclist">'+SOURCES.map(function(x){ return '<li><a href="'+x[1]+'" target="_blank" rel="noopener">'+x[0]+'</a>: '+x[2]+'</li>'; }).join('')+'</ul>'+
+    '<p class="evidence">Vengono bene: stampe giapponesi (Hokusai, Hiroshige), illustrazioni botaniche, nature morte, manifesti antichi; cioè soggetti grandi, contorni netti e pochi colori decisi. Su ogni immagine controlla che sia segnata come CC0 o di pubblico dominio. Scaricala sul telefono o sul computer e aprila qui con «Oppure parti da una tua foto». I diritti, in breve, sono nella <a href="#guida" data-guida="arte">guida</a>.</p>'+(compact?'</details>':''); }
+  return { FREE:FREE, svg:svg, legend:legend, remaining:remaining, prepare:prepare, geom:geom, colOf:colOf, sources:sources, SOURCES:SOURCES };
+})();
+
+TOOL_NAMES.colora='Colorare con i numeri';
+TOOLS.colora={ id:'colora', title:'Colorare con i numeri', defTitle:'Il mio disegno da colorare', ev:'plausibile',
+  intro:'Un disegno sempre nuovo diviso in zone, ognuna con il numero del suo colore: mandala, vetrate, paesaggi, fiori, geometrie. Oppure una tua foto, trasformata qui nel telefono o nel computer (la foto non viene inviata a nessuno). Si colora sullo schermo o con le matite, sul foglio stampato.',
+  steps:['Scegli il tema e il livello: più colori e zone più piccole ai livelli alti.','Premi «Disegno nuovo» finché ne trovi uno che ti piace; «Altri colori» cambia solo la tavolozza.','Puoi cambiare ogni colore della tavolozza toccando il suo quadratino.','Premi Controlla: l’app ti dice se i numeri si leggono e se due colori sono troppo simili.','Stampa: il disegno con i numeri, la legenda con i nomi dei colori e, a parte, il disegno colorato.'],
+  solutionTitle:'Il disegno colorato',
+  init:function(){ if(!TOOLS.colora._init) TOOLS.colora._init=ColoraCore.generate('mandala', 1, 4242); var d=clone(TOOLS.colora._init); d.view='col'; return d; },
+  side:function(ctx){ var d=ctx.d; return '<div class="panel"><h3>Il disegno</h3><p class="label">Tema</p>'+seg('co-th', ColoraCore.THEMES.map(function(t){ return [t, ColoraCore.THEME_NAMES[t]]; }), d.theme)+
+      '<p class="label">Livello</p>'+seg('co-lv', [[0,'Principiante'],[1,'Facile'],[2,'Medio'],[3,'Difficile'],[4,'Esperto']], d.level)+'<p class="evidence">Dal Principiante (fino a 6 colori, zone grandi) all’Esperto (fino a 24 colori, zone piccole). Quanti colori servono davvero dipende dal disegno.</p>'+
+      '<div class="row"><button class="btn primary" id="co-new">Disegno nuovo</button><button class="btn" id="co-pal">Altri colori</button></div>'+
+      '<div class="field"><label class="label" for="co-photo">Oppure parti da una tua foto</label><input type="file" id="co-photo" accept="image/*"><p class="evidence">La foto resta in questo dispositivo: l’app la rimpicciolisce e la divide in zone. Funziona meglio con soggetti grandi e colori decisi (un fiore, un paesaggio, un animale, un dipinto).</p>'+ColoraView.sources(true)+'</div><div id="co-msg" aria-live="polite"></div></div>'+
+      '<div class="panel"><h3>Colorare questo disegno</h3><div class="row"><button class="btn primary" id="co-play">Colora sullo schermo</button></div><p class="evidence">Si apre il gioco con questo disegno: con i numeri, con i colori scelti da te o libero.</p><label class="check"><input type="checkbox" id="co-free"'+(d.freeprint?' checked':'')+'> Stampa senza numeri: colori a scelta libera</label></div>'+
+      '<div class="panel"><h3>Vista</h3>'+seg('co-view', [['col','Colorato'],['num','Con i numeri']], d.view||'col')+'</div>'+
+      '<div class="panel"><h3>I colori</h3><p class="evidence">Tocca un quadratino per cambiare quel colore.</p><div id="co-pal-list"></div></div>'; },
+  syncSide:function(ctx){ setSeg('co-th', ctx.d.theme); setSeg('co-lv', ctx.d.level); setSeg('co-view', ctx.d.view||'col'); },
+  bind:function(ctx){ var d=ctx.d;
+    function make(theme, L, seed){ var m=$('co-msg'); if(m) m.innerHTML='<div class="note waiting" role="status"><span class="spin" aria-hidden="true"></span> Preparo il disegno…</div>';
+      var done=function(x){ if(m) m.innerHTML=''; if(!x) return; ctx.change(function(){ var keep={ title:d.title, dedica:d.dedica, workId:d.workId, view:d.view }; Object.keys(d).forEach(function(k){ if(!(k in {title:1,dedica:1,workId:1})) delete d[k]; }); Object.assign(d, x); d.view=keep.view||'col'; }); TOOLS.colora.syncSide(ctx); };
+      (typeof WG!=='undefined' ? WG.call('ColoraCore.generate', [theme, L, seed]) : Promise.reject()).catch(function(){ return ColoraCore.generate(theme, L, seed); }).then(done, function(){ if(m) m.innerHTML=warnMsg('Non sono riuscita a preparare il disegno.','Riprova.'); }); }
+    onSeg('co-th', function(v){ make(v, d.level, Date.now()%100000); });
+    onSeg('co-lv', function(v){ if(d.theme==='foto'){ if(ctx.ui.photo) fromPhoto(ctx.ui.photo, +v); else { $('co-msg').innerHTML=infoMsg('Per cambiare il livello di una foto, sceglila di nuovo.','La foto non viene conservata, per rispetto della riservatezza.'); setSeg('co-lv', d.level); } return; } make(d.theme, +v, Date.now()%100000); });
+    onSeg('co-view', function(v){ ctx.quiet(function(){ d.view=v; }); });
+    $('co-new').onclick=function(){ if(d.theme==='foto'){ $('co-msg').innerHTML=infoMsg('Questo disegno viene da una foto.','Scegli un tema per un disegno nuovo, oppure un’altra foto.'); return; } make(d.theme, d.level, Date.now()%100000); };
+    $('co-pal').onclick=function(){ ctx.change(function(){ d.pal=ColoraCore.repaint(d, Date.now()%100000); }); };
+    function fromPhoto(px, L){ var m=$('co-msg'); m.innerHTML='<div class="note waiting" role="status"><span class="spin" aria-hidden="true"></span> Trasformo la foto in un disegno da colorare… può volerci qualche secondo.</div>';
+      var args=[px.data, px.w, px.h, 0, L, 7];
+      (typeof WG!=='undefined' ? WG.call('ColoraCore.fromPixels', args) : Promise.reject()).catch(function(){ return ColoraCore.fromPixels.apply(null, args); }).then(function(x){ m.innerHTML=''; ctx.change(function(){ ['theme','level','w','h','rle','rc','pal','seed','f','ff','my','sel','fsel','mode','hl'].forEach(function(k){ delete d[k]; }); Object.assign(d, x); if(!d.title || d.title===TOOLS.colora.defTitle) d.title='La mia foto da colorare'; }); TOOLS.colora.syncSide(ctx); }, function(){ m.innerHTML=warnMsg('Non sono riuscita a leggere la foto.','Prova con un’altra immagine (JPG o PNG).'); }); }
+    $('co-photo').addEventListener('change', function(){ var f=this.files && this.files[0]; if(!f) return; var url=URL.createObjectURL(f), img=new Image();
+      img.onload=function(){ var s=Math.min(1, 200/Math.max(img.naturalWidth, img.naturalHeight)), w=Math.max(20, Math.round(img.naturalWidth*s)), h=Math.max(20, Math.round(img.naturalHeight*s)), cv=document.createElement('canvas'); cv.width=w; cv.height=h; var c2=cv.getContext('2d'); c2.fillStyle='#fff'; c2.fillRect(0,0,w,h); c2.drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url);
+        var px={ data:Array.prototype.slice.call(c2.getImageData(0,0,w,h).data), w:w, h:h }; ctx.ui.photo=px; fromPhoto(px, d.level==null?1:d.level); };
+      img.onerror=function(){ $('co-msg').innerHTML=warnMsg('Questo file non si apre come immagine.','Prova con una foto JPG o PNG.'); };
+      img.src=url; });
+    $('co-free').onchange=function(){ var c=this.checked; ctx.change(function(){ d.freeprint=c; }); };
+    $('co-play').onclick=function(){ var data={ theme:d.theme, level:d.level, w:d.w, h:d.h, rle:d.rle, rc:d.rc, pal:d.pal, seed:d.seed, mode:d.freeprint?'free':'num', title:d.title };
+      Share.encode(data).then(function(p){ location.hash='#gioca=colora.'+p; }); };
+    $('co-pal-list').addEventListener('input', function(e){ var t=e.target; if(t.dataset.pk==null) return; var k=+t.dataset.pk; ctx.mark(); d.pal[k]=t.value; ctx.quiet(function(){}); });
+    $('co-pal-list').addEventListener('change', function(e){ if(e.target.dataset.pk!=null) ctx.commit(); });
+  },
+  render:function(ctx){ var d=ctx.d, p=ctx.ui.printing, show=p?{ print:true }:(d.view==='num'?{ print:false }:{ sol:true });
+    if(p && d.freeprint){ var x=Object.assign({}, d, { mode:'free' }); ctx.work.innerHTML='<div class="boardfree colboard">'+ColoraView.svg(x, { print:true })+'</div><p class="keyline">Colora come vuoi: i colori li scegli tu.</p>'; }
+    else ctx.work.innerHTML='<div class="boardfree colboard">'+ColoraView.svg(d, show)+'</div>'+(p?'<h3 class="collegtitle">I colori</h3>'+ColoraView.legend(d,false):'');
+    var pl=$('co-pal-list'); if(pl && !p){ var nm=ColoraCore.names(d.pal); pl.innerHTML='<ul class="collegend edit">'+d.pal.map(function(c, k){ return '<li><input type="color" value="'+c+'" data-pk="'+k+'" aria-label="Colore '+(k+1)+', '+esc(nm[k])+'"><b>'+(k+1)+'</b> '+esc(nm[k])+'</li>'; }).join('')+'</ul>'; } },
+  check:function(ctx){ var d=ctx.d, st=ColoraCore.stats(d), g=ColoraView.geom(d), out='';
+    // grandezza del numero più piccolo su un foglio A4 (il disegno largo circa 18 cm)
+    var mm=Math.min.apply(null, g.labels.map(function(l){ return l.fs; }))*180/g.W;
+    out+= mm>=2.2 ? okMsg('I numeri si leggono.','Il numero più piccolo, stampato su A4, è alto circa '+mm.toFixed(1).replace('.',',')+' mm.') : warnMsg('Alcuni numeri sono molto piccoli.','Stampato su A4, il più piccolo è alto circa '+mm.toFixed(1).replace('.',',')+' mm: scegli un livello più basso o un formato più grande.');
+    if(st.close.length) out+=warnMsg('Ci sono colori molto simili tra loro.', st.close.map(function(c){ return 'il '+(c[0]+1)+' e il '+(c[1]+1); }).join(', ')+': chi colora potrebbe confonderli. Cambia uno dei due nella tavolozza.');
+    else out+=okMsg('I colori si distinguono bene tra loro.');
+    out+=infoMsg(st.regions+' zone, '+st.colors+' colori.', d.theme==='foto'?'Disegno ricavato da una foto.':'Tema: '+(ColoraCore.THEME_NAMES[d.theme]||d.theme)+'.');
+    return out; },
+  solution:function(ctx){ return '<div class="boardfree colboard">'+ColoraView.svg(ctx.d, { sol:true })+'</div>'; },
+  solutionLabel:'Il disegno colorato su una pagina a parte (con la stampa senza numeri è solo un esempio)'
+};
+
+/* --- gioco sullo schermo --- */
+TOOLS.colora.play={
+  intro:'Scegli un colore e tocca le zone con il suo numero. Non c’è fretta: puoi interrompere e riprendere quando vuoi.',
+  steps:['Scegli un colore in basso: le zone con il suo numero diventano grigie.','Tocca una zona grigia per colorarla. Se tocchi una zona di un altro numero, l’app te lo dice.','Per le zone piccole usa «Ingrandisci o sposta».','«Colori miei»: i numeri restano, ma i colori li scegli tu. «Libero»: niente numeri, ogni zona del colore che vuoi.'],
+  prepare:function(d){ ColoraView.prepare(d); },
+  side:function(ctx){ return '<div class="panel" id="col-side"><h3>Come colorare</h3>'+seg('col-mode', [['num','Con i numeri'],['mine','Colori miei'],['free','Libero']], ctx.d.mode||'num')+
+      '<label class="check"><input type="checkbox" id="col-hl"'+(ctx.d.hl!==false?' checked':'')+'> Evidenzia in grigio le zone del colore scelto</label><p class="evidence" id="col-prog"></p></div>'+
+      '<div class="panel"><h3>I colori</h3><div class="padsym colpad" id="col-pad"></div><div class="row"><button class="btn small" id="col-next">Colora una zona del colore scelto</button></div><p class="evidence">Il pulsante colora per te una zona alla volta: utile con la tastiera o se toccare le zone piccole è difficile.</p><div id="col-mine"></div><div id="col-msg" aria-live="polite"></div></div>'; },
+  bind:function(ctx){ var d=ctx.d;
+    onSeg('col-mode', function(v){ ctx.quiet(function(){ d.mode=v; }); });
+    $('col-hl').onchange=function(){ var c=this.checked; ctx.quiet(function(){ d.hl=c; }); };
+    function say(t){ var m=$('col-msg'); if(m) m.innerHTML=t?'<p class="evidence">'+t+'</p>':''; if(t && window.kbSay) kbSay(t.replace(/<[^>]+>/g,'')); }
+    document.querySelector('#app .side').addEventListener('click', function(e){ var b=e.target.closest('[data-col],[data-fc],[data-myc]'); if(!b) return;
+      if(b.dataset.col!=null){ var k=+b.dataset.col; ctx.quiet(function(){ d.sel=k; }); say(''); }
+      else if(b.dataset.fc!=null){ var f=+b.dataset.fc; ctx.quiet(function(){ d.fsel=f; }); }
+      else if(b.dataset.myc!=null){ var hx=b.dataset.myc; ctx.change(function(){ d.my[d.sel]=hx; }); } });
+    function paint(r){ if(d.mode==='free'){ ctx.change(function(){ d.ff[r]=d.fsel; }); return; }
+      if(d.f[r]===d.rc[r]) return;
+      if(d.rc[r]!==d.sel){ say('Questa zona ha il numero <b>'+(d.rc[r]+1)+'</b>. Hai scelto il '+(d.sel+1)+'.'); return; }
+      say(''); ctx.change(function(){ d.f[r]=d.rc[r]; });
+      var rem=ColoraView.remaining(d); if(!rem.byC[d.sel] && rem.n){ var next=Object.keys(rem.byC).map(Number).sort(function(a,b){ return a-b; }).filter(function(k){ return k>d.sel; })[0]; if(next==null) next=+Object.keys(rem.byC)[0]; var was=d.sel; ctx.quiet(function(){ d.sel=next; }); say('Il colore '+(was+1)+' è finito. Ora il '+(next+1)+'.'); } }
+    $('col-next').onclick=function(){ if(d.mode==='free'){ var e=d.ff.indexOf(-1); if(e<0){ say('Tutte le zone sono colorate.'); return; } paint(e); return; }
+      for(var i=0;i<d.rc.length;i++) if(d.rc[i]===d.sel && d.f[i]!==d.rc[i]){ paint(i); return; } say('Le zone di questo colore sono finite.'); };
+    ctx.work.addEventListener('click', function(e){ var t=e.target.closest && e.target.closest('[data-r]'); if(!t) return; paint(+t.dataset.r); });
+  },
+  render:function(ctx){ var d=ctx.d; ColoraView.prepare(d); var p=ctx.ui.printing;
+    if(p){ ctx.work.innerHTML='<div class="boardfree colboard">'+ColoraView.svg(d, { print:true })+'</div>'+(d.mode==='free'?'':'<h3 class="collegtitle">I colori</h3>'+ColoraView.legend(d, d.mode==='mine')); return; }
+    ctx.work.innerHTML='<div class="boardfree colboard">'+ColoraView.svg(d, { play:true })+'</div>';
+    var rem=ColoraView.remaining(d), pad=$('col-pad'), mine=$('col-mine'), prog=$('col-prog');
+    if(prog) prog.textContent = rem.n ? 'Zone ancora da colorare: '+rem.n+' su '+d.rc.length+'.' : 'Tutte le zone sono colorate. ✨';
+    if(pad){ if(d.mode==='free') pad.innerHTML=ColoraView.FREE.map(function(c, k){ return '<button class="btn colsw" data-fc="'+k+'" aria-pressed="'+(d.fsel===k)+'" aria-label="'+esc(ColoraCore.colorName(c))+'" style="--sw:'+c+'"><span class="sw"></span></button>'; }).join('');
+      else pad.innerHTML=d.pal.map(function(c, k){ var left=rem.byC[k]||0, col=ColoraView.colOf(d,k); return '<button class="btn colsw'+(left?'':' done')+'" data-col="'+k+'" aria-pressed="'+(d.sel===k)+'" aria-label="Colore '+(k+1)+', '+esc(ColoraCore.colorName(col))+(left?', '+left+' zone':', finito')+'" style="--sw:'+col+'"><span class="sw"></span><b>'+(k+1)+'</b></button>'; }).join(''); }
+    if(mine) mine.innerHTML = d.mode==='mine' ? '<p class="label">Il colore per il numero '+(d.sel+1)+'</p><div class="colpad small">'+ColoraView.FREE.map(function(c){ return '<button class="btn colsw" data-myc="'+c+'" aria-label="'+esc(ColoraCore.colorName(c))+'" style="--sw:'+c+'"><span class="sw"></span></button>'; }).join('')+'</div>' : ''; },
+  check:function(ctx){ var rem=ColoraView.remaining(ctx.d); return rem.n ? infoMsg('Mancano '+rem.n+(rem.n===1?' zona':' zone')+'.', ctx.d.mode==='free'?'Colora tutte le zone bianche.':'Il numero accanto a ogni colore, in basso, dice quante zone ne mancano.') : okMsg('Hai colorato tutto il disegno!','Puoi stamparlo o salvarne un altro.'); },
+  solution:function(ctx){ return '<div class="boardfree colboard">'+ColoraView.svg(ctx.d, { sol:true })+'</div>'; },
+  print:function(ctx){ TOOLS.colora.play.render(ctx); }
+};
+
+/* ===================== COPIA CON LA GRIGLIA =====================
+   Due esercizi:
+   - «Figure a punti»: una figura fatta di segmenti su una griglia di punti; la si ricopia sulla griglia accanto
+     toccando i punti (anche allo specchio, al livello Esperto). L'app confronta la copia con il modello.
+   - «Disegno con la griglia»: il metodo classico dei disegnatori. Un disegno (un tema o una tua immagine) è
+     diviso in quadretti; accanto c'è una griglia vuota, anche più grande, da riempire quadretto per quadretto. */
+var CopiaView=(function(){
+  var CS=56, M=26;
+  function xy(n, i){ return [M+(i%n)*CS, M+Math.floor(i/n)*CS]; }
+  function segsSVG(n, segs, col, w){ return segs.map(function(k){ var p=CopiaCore.pts(k), a=xy(n,p[0]), b=xy(n,p[1]); return '<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" stroke="'+col+'" stroke-width="'+w+'" stroke-linecap="round"/>'; }).join(''); }
+  // o: { segs, user, sel, hit, title, marks:{k:'ok'|'extra'}, missing:[...] }
+  function grid(n, o){ var S=M*2+(n-1)*CS, s='<svg class="cpsvg'+(o.hit?' main':'')+'" viewBox="0 0 '+S+' '+(S+(o.title?30:0))+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="'+esc(o.title||'Griglia di punti')+'">';
+    if(o.title) s+='<text x="'+(S/2)+'" y="'+(S+22)+'" font-size="18" text-anchor="middle" font-family="'+FONT+'" fill="#333" font-weight="700">'+esc(o.title)+'</text>';
+    s+='<rect x="4" y="4" width="'+(S-8)+'" height="'+(S-8)+'" rx="10" fill="#fff" stroke="#bbb" stroke-width="1.5"/>';
+    if(o.missing) s+=segsSVG(n, o.missing, '#f2b8b8', 9);
+    if(o.segs) s+=segsSVG(n, o.segs, '#1f3a5f', 7);
+    if(o.user){ s+=o.user.map(function(k){ var p=CopiaCore.pts(k), a=xy(n,p[0]), b=xy(n,p[1]), bad=o.marks && o.marks[k]==='extra'; return '<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" stroke="'+(bad?'#c62828':'#2e7d32')+'" stroke-width="7" stroke-linecap="round"'+(bad?' stroke-dasharray="10 7"':'')+'/>'; }).join(''); }
+    for(var i=0;i<n*n;i++){ var p=xy(n,i), on=o.sel===i; s+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(on?11:6)+'" fill="'+(on?'#f57c00':'#333')+'"/>'; if(o.hit) s+='<circle data-p="'+i+'" cx="'+p[0]+'" cy="'+p[1]+'" r="'+(CS*0.45)+'" fill="transparent"/>'; }
+    return s+'</svg>'; }
+  // disegno con la griglia: contorni del disegno + quadretti con lettere e numeri
+  function drawGrid(d, empty, scale){ var g=ColoraView.geom(d.img), k=d.k||6, W=g.W, H=g.H, cw=W/k, rows=Math.max(2, Math.round(H/cw)), ch=H/rows, L=26, s='<svg class="cpsvg" viewBox="0 0 '+(W+L+6)+' '+(H+L+6)+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="'+(empty?'Griglia vuota':'Disegno con la griglia')+'">';
+    s+='<g transform="translate('+L+','+L+')"><rect width="'+W+'" height="'+H+'" fill="#fff"/>';
+    if(!empty) s+='<path d="'+g.lines+'" fill="none" stroke="#333" stroke-width="1.6" stroke-linejoin="round"/>';
+    for(var c=0;c<=k;c++) s+='<line x1="'+(c*cw)+'" y1="0" x2="'+(c*cw)+'" y2="'+H+'" stroke="'+(empty?'#555':'#7aa7d6')+'" stroke-width="'+(c%k===0?2:1.2)+'"/>';
+    for(var r=0;r<=rows;r++) s+='<line x1="0" y1="'+(r*ch)+'" x2="'+W+'" y2="'+(r*ch)+'" stroke="'+(empty?'#555':'#7aa7d6')+'" stroke-width="'+(r%rows===0?2:1.2)+'"/>';
+    s+='</g>';
+    for(var c2=0;c2<k;c2++) s+='<text x="'+(L+c2*cw+cw/2)+'" y="18" font-size="15" text-anchor="middle" font-family="'+FONT+'" fill="#444">'+'ABCDEFGHIJKLMNOP'[c2]+'</text>';
+    for(var r2=0;r2<rows;r2++) s+='<text x="12" y="'+(L+r2*ch+ch/2+5)+'" font-size="15" text-anchor="middle" font-family="'+FONT+'" fill="#444">'+(r2+1)+'</text>';
+    return s+'</svg>'; }
+  return { grid:grid, drawGrid:drawGrid };
+})();
+
+TOOL_NAMES.copia='Copia con la griglia';
+TOOLS.copia={ id:'copia', title:'Copia con la griglia', defTitle:'Il mio esercizio di copia', ev:'plausibile',
+  intro:'Due esercizi per allenare lo sguardo e la mano. «Figure a punti»: una figura da ricopiare su una griglia di punti, anche allo specchio. «Disegno con la griglia»: il metodo classico dei disegnatori, per copiare (e ingrandire) un disegno o una tua immagine quadretto per quadretto.',
+  steps:['Scegli l’esercizio: Figure a punti oppure Disegno con la griglia.','Figure a punti: premi «Figura nuova», oppure disegna tu il modello toccando due punti per tracciare una linea.','Disegno con la griglia: scegli un tema o una tua immagine e quanti quadretti; se vuoi, la griglia vuota più grande per ingrandire il disegno.','Stampa: il modello e la griglia vuota per la copia; la soluzione su un’altra pagina.'],
+  solutionTitle:'Il modello',
+  init:function(){ var d=CopiaCore.make(1, 31); d.kind='punti'; d.k=6; d.big=false; return d; },
+  side:function(ctx){ var d=ctx.d; return '<div class="panel"><h3>L’esercizio</h3>'+seg('cp-kind', [['punti','Figure a punti'],['disegno','Disegno con la griglia']], d.kind||'punti')+'</div>'+
+    '<div class="panel" id="cp-p-punti"><h3>Figure a punti</h3><p class="label">Punti per lato</p>'+seg('cp-n', [[4,'4'],[5,'5'],[6,'6'],[7,'7'],[8,'8']], d.n)+'<p class="evidence">Cambiare il numero di punti cancella la figura (con Annulla torni indietro).</p>'+
+      '<p class="label">Livello della figura nuova</p>'+seg('cp-lv', [[0,'Principiante'],[1,'Facile'],[2,'Medio'],[3,'Difficile'],[4,'Esperto']], d.level==null?1:d.level)+
+      '<div class="row"><button class="btn primary" id="cp-new">Figura nuova</button><button class="btn" id="cp-empty">Svuota</button></div>'+
+      '<label class="check"><input type="checkbox" id="cp-mirror"'+(d.mirror?' checked':'')+'> Copia allo specchio (più difficile)</label><p class="evidence">Per disegnare il modello: tocca un punto, poi un altro sulla stessa riga, colonna o diagonale. Tocca di nuovo una linea per cancellarla.</p><div id="cp-msg" aria-live="polite"></div></div>'+
+    '<div class="panel" id="cp-p-disegno"><h3>Disegno con la griglia</h3><p class="label">Disegno</p>'+seg('cp-th', ColoraCore.THEMES.map(function(t){ return [t, ColoraCore.THEME_NAMES[t]]; }), d.img && d.img.theme)+
+      '<div class="row"><button class="btn" id="cp-dnew">Disegno nuovo</button></div><div class="field"><label class="label" for="cp-photo">Oppure una tua immagine (anche un’opera d’arte libera da diritti)</label><input type="file" id="cp-photo" accept="image/*">'+ColoraView.sources(true)+'</div>'+
+      '<p class="label">Quadretti per lato</p>'+seg('cp-k', [[4,'4'],[6,'6'],[8,'8'],[10,'10']], d.k||6)+
+      '<label class="check"><input type="checkbox" id="cp-big"'+(d.big?' checked':'')+'> Griglia vuota più grande (per ingrandire il disegno)</label><div id="cp-dmsg" aria-live="polite"></div></div>'; },
+  syncSide:function(ctx){ var d=ctx.d; setSeg('cp-kind', d.kind||'punti'); setSeg('cp-n', d.n); setSeg('cp-k', d.k||6); var m=$('cp-mirror'); if(m) m.checked=!!d.mirror; },
+  bind:function(ctx){ var d=ctx.d;
+    onSeg('cp-kind', function(v){ if(v==='disegno' && !d.img){ newImg(d.theme||'fiori'); } ctx.change(function(){ d.kind=v; }); });
+    onSeg('cp-n', function(v){ ctx.change(function(){ d.n=+v; d.seg=[]; d.sel=null; }); });
+    onSeg('cp-lv', function(v){ ctx.quiet(function(){ d.level=+v; }); });
+    $('cp-new').onclick=function(){ var x=CopiaCore.make(d.level==null?1:d.level, Date.now()%100000); if(!x) return; ctx.change(function(){ d.n=x.n; d.seg=x.seg; d.mirror=x.mirror; d.sel=null; }); TOOLS.copia.syncSide(ctx); };
+    $('cp-empty').onclick=function(){ ctx.change(function(){ d.seg=[]; d.sel=null; }); };
+    $('cp-mirror').onchange=function(){ var c=this.checked; ctx.change(function(){ d.mirror=c; }); };
+    function newImg(theme){ var m=$('cp-dmsg'); if(m) m.innerHTML='<div class="note waiting" role="status"><span class="spin" aria-hidden="true"></span> Preparo il disegno…</div>';
+      (typeof WG!=='undefined' ? WG.call('ColoraCore.generate', [theme, 1, Date.now()%100000]) : Promise.reject()).catch(function(){ return ColoraCore.generate(theme, 1, Date.now()%100000); }).then(function(x){ if(m) m.innerHTML=''; ctx.change(function(){ d.img={ w:x.w, h:x.h, rle:x.rle, rc:x.rc, pal:x.pal, theme:x.theme }; }); }); }
+    onSeg('cp-th', function(v){ newImg(v); });
+    $('cp-dnew').onclick=function(){ newImg(d.img && d.img.theme && d.img.theme!=='foto' ? d.img.theme : 'fiori'); };
+    onSeg('cp-k', function(v){ ctx.change(function(){ d.k=+v; }); });
+    $('cp-big').onchange=function(){ var c=this.checked; ctx.change(function(){ d.big=c; }); };
+    $('cp-photo').addEventListener('change', function(){ var f=this.files && this.files[0]; if(!f) return; var url=URL.createObjectURL(f), img=new Image(), m=$('cp-dmsg');
+      img.onload=function(){ var s=Math.min(1, 200/Math.max(img.naturalWidth, img.naturalHeight)), w=Math.max(20, Math.round(img.naturalWidth*s)), h=Math.max(20, Math.round(img.naturalHeight*s)), cv=document.createElement('canvas'); cv.width=w; cv.height=h; var c2=cv.getContext('2d'); c2.fillStyle='#fff'; c2.fillRect(0,0,w,h); c2.drawImage(img,0,0,w,h); URL.revokeObjectURL(url);
+        m.innerHTML='<div class="note waiting" role="status"><span class="spin" aria-hidden="true"></span> Trasformo l’immagine in un disegno a contorni…</div>';
+        var args=[Array.prototype.slice.call(c2.getImageData(0,0,w,h).data), w, h, 6, 1, 7];
+        (typeof WG!=='undefined' ? WG.call('ColoraCore.fromPixels', args) : Promise.reject()).catch(function(){ return ColoraCore.fromPixels.apply(null, args); }).then(function(x){ m.innerHTML=''; ctx.change(function(){ d.img={ w:x.w, h:x.h, rle:x.rle, rc:x.rc, pal:x.pal, theme:'foto' }; d.kind='disegno'; }); TOOLS.copia.syncSide(ctx); }, function(){ m.innerHTML=warnMsg('Non sono riuscita a leggere l’immagine.','Prova con un file JPG o PNG.'); }); };
+      img.onerror=function(){ m.innerHTML=warnMsg('Questo file non si apre come immagine.','Prova con un file JPG o PNG.'); }; img.src=url; });
+    // disegnare il modello toccando i punti
+    ctx.work.addEventListener('click', function(e){ if((d.kind||'punti')!=='punti') return; var t=e.target.closest && e.target.closest('[data-p]'); if(!t) return; var p=+t.dataset.p;
+      var msg=$('cp-msg'); if(d.sel==null || d.sel===p){ ctx.quiet(function(){ d.sel = d.sel===p ? null : p; }); return; }
+      var L=CopiaCore.line(d.n, d.sel, p); if(!L){ if(msg) msg.innerHTML=infoMsg('Solo in linea retta.','In orizzontale, in verticale o in diagonale.'); ctx.quiet(function(){ d.sel=p; }); return; } if(msg) msg.innerHTML='';
+      ctx.change(function(){ var S={}; d.seg.forEach(function(k){ S[k]=1; }); var all=L.every(function(k){ return S[k]; }); L.forEach(function(k){ if(all) delete S[k]; else S[k]=1; }); d.seg=Object.keys(S).sort(); d.sel=p; }); });
+  },
+  render:function(ctx){ var d=ctx.d, p=ctx.ui.printing, kind=d.kind||'punti', a=$('cp-p-punti'), b=$('cp-p-disegno'); if(a) a.hidden=kind!=='punti'; if(b) b.hidden=kind!=='disegno';
+    if(kind==='disegno'){ if(!d.img){ ctx.work.innerHTML='<p class="note">Scegli un disegno o una tua immagine.</p>'; return; }
+      ctx.work.innerHTML='<p class="keyline">Copia il disegno quadretto per quadretto: guarda che cosa c’è in ogni quadretto (per esempio B3) e disegnalo nello stesso quadretto della griglia vuota.</p><div class="cpgrid'+(d.big?' big':'')+'"><div>'+CopiaView.drawGrid(d,false)+'</div><div>'+CopiaView.drawGrid(d,true)+'</div></div>'; return; }
+    var instr = d.mirror ? 'Copia la figura <b>allo specchio</b>: quello che nel modello è a sinistra, nella copia va a destra.' : 'Copia la figura nella griglia vuota, linea per linea.';
+    if(p){ ctx.work.innerHTML='<p class="keyline">'+instr+'</p><div class="cpgrid"><div>'+CopiaView.grid(d.n, { segs:d.seg, title:'Il modello' })+'</div><div>'+CopiaView.grid(d.n, { title:'La tua copia' })+'</div></div>'; return; }
+    ctx.work.innerHTML='<div class="boardfree">'+CopiaView.grid(d.n, { segs:d.seg, sel:d.sel, hit:true, title:'Il modello (tocca i punti per disegnarlo)' })+'</div>'; },
+  check:function(ctx){ var d=ctx.d; if((d.kind||'punti')==='disegno') return infoMsg('Questo esercizio si fa sulla carta.','Stampa il disegno e la griglia vuota. Con meno quadretti è più facile; con la griglia più grande il disegno si ingrandisce.');
+    if(!d.seg.length) return infoMsg('La figura è vuota.','Disegnala toccando i punti, oppure premi «Figura nuova».');
+    var out=infoMsg('La figura ha '+d.seg.length+' segmenti su una griglia di '+d.n+'×'+d.n+' punti.', d.mirror?'Si copia allo specchio.':'Si copia così com’è.');
+    if(!CopiaCore.connected(d.n, d.seg)) out+=warnMsg('La figura è fatta di pezzi staccati.','Va bene, ma è più difficile da copiare: chi copia non ha un punto di partenza unico.');
+    else out+=okMsg('La figura è tutta collegata.');
+    return out; },
+  solution:function(ctx){ var d=ctx.d; if((d.kind||'punti')==='disegno') return ''; return '<div class="cpgrid one">'+CopiaView.grid(d.n, { segs:CopiaCore.target(d), title:d.mirror?'La copia allo specchio':'La copia' })+'</div>'; }
+};
+
+/* --- gioco sullo schermo: figure a punti --- */
+TOOLS.copia.play={
+  intro:'Ricopia la figura nella griglia vuota: tocca un punto, poi un altro sulla stessa riga, colonna o diagonale. Non c’è tempo.',
+  steps:['Guarda il modello: da quale punto parte la figura?','Nella griglia vuota tocca un punto, poi un secondo punto: si traccia la linea tra i due.','Puoi continuare dal punto dove sei arrivato. Tocca di nuovo una linea per cancellarla.','Controlla ti dice quante linee sono giuste, quante mancano e quante sono in più.'],
+  prepare:function(d){ d.pu=d.pu||[]; d.sel=null; d.show=false; },
+  side:function(ctx){ return '<div class="panel"><h3>Come si gioca</h3><p class="evidence" id="cp-info"></p><div id="cp-pmsg" aria-live="polite"></div><label class="check"><input type="checkbox" id="cp-show"> Mostra le linee sbagliate</label></div>'; },
+  bind:function(ctx){ var d=ctx.d;
+    $('cp-show').onchange=function(){ var c=this.checked; ctx.quiet(function(){ d.show=c; }); };
+    ctx.work.addEventListener('click', function(e){ var t=e.target.closest && e.target.closest('[data-p]'); if(!t) return; var p=+t.dataset.p, msg=$('cp-pmsg');
+      if(d.sel==null || d.sel===p){ ctx.quiet(function(){ d.sel = d.sel===p ? null : p; }); return; }
+      var L=CopiaCore.line(d.n, d.sel, p); if(!L){ if(msg) msg.innerHTML='<p class="evidence">Solo in linea retta: in orizzontale, in verticale o in diagonale.</p>'; ctx.quiet(function(){ d.sel=p; }); return; } if(msg) msg.innerHTML='';
+      ctx.change(function(){ var S={}; d.pu.forEach(function(k){ S[k]=1; }); var all=L.every(function(k){ return S[k]; }); L.forEach(function(k){ if(all) delete S[k]; else S[k]=1; }); d.pu=Object.keys(S).sort(); d.sel=p; }); });
+  },
+  render:function(ctx){ var d=ctx.d, p=ctx.ui.printing;
+    if(p){ TOOLS.copia.render(ctx); return; }
+    var marks={}, T={}; CopiaCore.target(d).forEach(function(k){ T[k]=1; }); if(d.show) d.pu.forEach(function(k){ if(!T[k]) marks[k]='extra'; });
+    ctx.work.innerHTML='<p class="keyline">'+(d.mirror?'Copia la figura <b>allo specchio</b>: quello che è a sinistra va a destra.':'Copia la figura nella griglia a destra.')+'</p><div class="cpgrid"><div>'+CopiaView.grid(d.n, { segs:d.seg, title:'Il modello' })+'</div><div>'+CopiaView.grid(d.n, { user:d.pu, sel:d.sel, hit:true, marks:marks, title:'La tua copia' })+'</div></div>';
+    var inf=$('cp-info'); if(inf){ var c=CopiaCore.compare(d, d.pu); inf.textContent='Linee tracciate: '+d.pu.length+'. Il modello ne ha '+c.total+'.'; } },
+  check:function(ctx){ var c=CopiaCore.compare(ctx.d, ctx.d.pu); if(c.ok===c.total && !c.extra) return okMsg('La copia è perfetta!','');
+    return infoMsg('Linee giuste: '+c.ok+' su '+c.total+'.', (c.miss?'Ne mancano '+c.miss+'. ':'')+(c.extra?(c.extra===1?'Una linea è':c.extra+' linee sono')+' in più o al posto sbagliato (spunta «Mostra le linee sbagliate» per vederle).':'')); },
+  solution:function(ctx){ return TOOLS.copia.solution(ctx); },
+  print:function(ctx){ TOOLS.copia.render(ctx); }
+};
+
 /* ===================== COME SI GIOCA: regole ed esempi passo passo ===================== */
 (function(){
 // piccola griglia illustrata: v = righe di caratteri ('#' nera, '.' vuota, altro = testo); hi = {"r,c":colore}; note = {"r,c":testo piccolo}
@@ -7526,6 +8229,10 @@ function K(cl, vals, hi){ // kakuro 3x3 con indizi: cl = {"r,c":{o:..,v:..}}
   var cs=56, s='<svg viewBox="-3 -3 '+(3*cs+6)+' '+(3*cs+6)+'" class="rx" style="max-width:180px" xmlns="http://www.w3.org/2000/svg">';
   for(var r=0;r<3;r++) for(var c=0;c<3;c++){ var k=r+','+c, x=c*cs, y=r*cs; if(r===0||c===0){ s+='<rect x="'+x+'" y="'+y+'" width="'+cs+'" height="'+cs+'" fill="#3a4656" stroke="#1b2735"/>'; var q=cl[k]; if(q){ s+='<line x1="'+x+'" y1="'+y+'" x2="'+(x+cs)+'" y2="'+(y+cs)+'" stroke="#c8d0da"/>'; if(q.o) s+=txt(x+cs*0.7,y+cs*0.32,String(q.o),16,{anchor:'middle',base:'central',fill:'#fff',weight:700}); if(q.v) s+=txt(x+cs*0.3,y+cs*0.72,String(q.v),16,{anchor:'middle',base:'central',fill:'#fff',weight:700}); } continue; }
     s+='<rect x="'+x+'" y="'+y+'" width="'+cs+'" height="'+cs+'" fill="'+((hi&&hi[k])||'#fff')+'" stroke="#1b2735" stroke-width="1.5"/>'; if(vals[k]) s+=txt(x+cs/2,y+cs/2+1,String(vals[k]),26,{anchor:'middle',base:'central',fill:'#1f5fa8',weight:700}); }
+  return s+'</svg>'; }
+function CZ(fills, nums, hide){ var Z=['M10 10H110L80 70H10Z','M110 10H190V70H80Z','M10 70H80L60 130H10Z','M80 70H190V130H60Z'], N=[[45,40,1],[150,40,2],[35,100,3],[130,100,2]], s='<svg viewBox="0 0 200 140" width="220" role="img" aria-label="Esempio di disegno con i numeri">';
+  Z.forEach(function(d,i){ s+='<path d="'+d+'" fill="'+fills[i]+'" stroke="#444" stroke-width="2"/>'; });
+  if(nums) N.forEach(function(n,i){ if(hide && hide[i]) return; s+='<text x="'+n[0]+'" y="'+n[1]+'" font-size="20" text-anchor="middle" dominant-baseline="central" font-family="Arial" fill="#555">'+n[2]+'</text>'; });
   return s+'</svg>'; }
 var RULES = {
   sudoku:{ scopo:'Riempire la griglia in modo che ogni simbolo compaia una sola volta in ogni riga, in ogni colonna e in ogni riquadro.',
@@ -7563,6 +8270,19 @@ var RULES = {
       { t:'Una riga lunga 5 con "2 2": l’unico modo è colorato, colorato, vuoto, colorato, colorato.', f:function(){ return G(['##.##'],{cs:36}); } },
       { t:'Incrociando righe e colonne, a poco a poco appare il disegno.', f:function(){ return G(['.##.##.','#######','#######','.#####.','..###..','...#...'],{cs:28}); } }],
     crea:['Colora le caselle per disegnare la tua figura.','L’app scrive i numeri a margine.','Controlla ti dice se il disegno si ritrova con il solo ragionamento.'] },
+  colora:{ scopo:'Colorare ogni zona del disegno con il colore del suo numero, finché il disegno è completo.',
+    regole:['Ogni zona ha un numero. In basso, accanto a ogni colore, c’è il suo numero (sul foglio stampato c’è la legenda, con i nomi dei colori).','Scegli un colore: le zone con quel numero diventano grigie, così le trovi subito.','Tocca una zona per colorarla; la zona colorata perde il numero.','Non c’è un tempo. Se tocchi una zona di un altro numero, l’app te lo dice e non succede niente.','Puoi anche scegliere tu i colori («Colori miei») o colorare liberamente, senza numeri («Libero»).'],
+    passi:[{ t:'Ogni zona ha il numero del suo colore.', f:function(){ return CZ(['#fff','#fff','#fff','#fff'], true); } },
+      { t:'Scelgo il colore 2: le zone con il 2 diventano grigie.', f:function(){ return CZ(['#fff','#d4d4d4','#fff','#d4d4d4'], true); } },
+      { t:'Le tocco e si colorano. Poi passo a un altro colore.', f:function(){ return CZ(['#fff','#7cb342','#fff','#7cb342'], true, [0,1,0,1]); } },
+      { t:'Alla fine il disegno è completo.', f:function(){ return CZ(['#fb8c00','#7cb342','#1e88e5','#7cb342'], false); } }],
+    crea:['Scegli un tema e un livello, oppure una tua foto.','Premi «Disegno nuovo» finché ne trovi uno che ti piace; «Altri colori» cambia la tavolozza.','Controlla ti dice se i numeri si leggono e se due colori sono troppo simili.'] },
+  copia:{ scopo:'Ricopiare la figura del modello nella griglia vuota, linea per linea.',
+    regole:['A sinistra c’è il modello: linee tra i punti di una griglia. A destra la stessa griglia, vuota.','Per tracciare una linea tocca un punto e poi un altro sulla stessa riga, colonna o diagonale.','Puoi continuare dal punto dove sei arrivato; tocca di nuovo una linea per cancellarla.','Al livello Esperto la copia va fatta allo specchio: quello che nel modello è a sinistra, nella copia va a destra.','Controlla dice quante linee sono giuste, quante mancano e quante sono in più.'],
+    passi:[{ t:'Il modello: trova il punto da cui partire, per esempio un angolo.', f:function(){ return CopiaView.grid(4,{ segs:['0-1','1-5','5-6','6-10'], title:'Il modello' }); } },
+      { t:'Nella griglia vuota tocco lo stesso punto e poi il punto accanto: ecco la prima linea.', f:function(){ return CopiaView.grid(4,{ user:['0-1'], sel:1, title:'La copia' }); } },
+      { t:'Continuo dal punto dove sono arrivato, una linea alla volta, contando i punti.', f:function(){ return CopiaView.grid(4,{ user:['0-1','1-5','5-6','6-10'], sel:10, title:'La copia' }); } }],
+    crea:['Premi «Figura nuova» oppure disegna tu il modello toccando i punti.','Spunta «Copia allo specchio» per renderlo più difficile.','Oppure scegli «Disegno con la griglia»: un disegno o una tua immagine da copiare quadretto per quadretto.'] },
   cifrato:{ scopo:'Scoprire quale lettera si nasconde dietro ogni numero.',
     regole:['È un cruciverba senza definizioni: in ogni casella c’è un numero invece della lettera.','Lo stesso numero è sempre la stessa lettera; numeri diversi sono lettere diverse.','Alcune lettere sono già date. Da lì si indovinano le parole e si scoprono le altre lettere.','Ogni lettera scoperta va scritta in tutte le caselle con lo stesso numero.'],
     passi:[{ t:'Sappiamo che 1 = C e 2 = A. La parola 1-2-3-2 diventa C A _ A.', f:function(){ return G(['CA.A'],{cs:44,note:{'0,0':'1','0,1':'2','0,2':'3','0,3':'2'}}); } },
@@ -7958,6 +8678,12 @@ var GEN = {
     make:function(L, seed){ var D=Dict.D, rnd=makeRng(seed), n=[8,10,12,15,20][L], cnt=[6,9,12,16,26][L], words=[]; for(var t=0;t<2000 && words.length<cnt;t++){ var len=4+Math.floor(rnd()*Math.min(6,n-4)), pool=D.lenList(len,L<2?3:2); if(!pool.length) continue; var w=D.words[pool[Math.floor(rnd()*pool.length)]]; if(D.nice(w) && words.indexOf(w)<0) words.push(w); }
       return { text:words.join('\n'), size:n, diag:L>=2, back:L>=3, key:'', seed:seed }; },
     solved:function(d){ var r=TOOLS.crucipuzzle.gen(d); return d.found && d.found.length===r.placed.length; } },
+  colora:{ name:'Colorare con i numeri', desc:'Un disegno sempre nuovo: ogni zona ha il numero del suo colore.', lv:['pochi colori, zone grandi','fino a 8 colori','fino a 12 colori','fino a 16 colori','fino a 24 colori, zone piccole'],
+    make:function(L, seed){ var d=ColoraCore.generate(null, L, seed); d.mode='num'; return d; },
+    solved:function(d){ if(!d.rc || !d.f) return false; if(d.mode==='free') return d.ff && d.ff.every(function(v){ return v>=0; }); for(var i=0;i<d.rc.length;i++) if(d.f[i]!==d.rc[i]) return false; return true; } },
+  copia:{ name:'Copia con la griglia', desc:'Ricopia la figura sulla griglia di punti, anche allo specchio.', lv:['4×4 punti','5×5 punti, anche in diagonale','6×6 punti','7×7 punti','7×7 punti, allo specchio'],
+    make:function(L, seed){ var d=CopiaCore.make(L, seed); if(d){ d.pu=[]; } return d; },
+    solved:function(d){ if(!d.seg || !d.pu) return false; var c=CopiaCore.compare(d, d.pu); return c.ok===c.total && !c.extra; } },
   cifrato:{ name:'Crittografato', desc:'Un numero per ogni lettera.', dict:true, lv:['7×7','9×9','9×9, meno aiuti','11×11','13×13'],
     make:function(L, seed){ var n=[7,9,9,11,13][L], C=FillCore.clean(Dict.D), t0=Date.now(), att=0;
       // si continua con schemi nuovi finché non se ne trova uno verificato (al massimo 25 secondi): niente più "tre tentativi e poi niente"
@@ -7981,8 +8707,8 @@ function renderGiocaHub(){
   var html='<section class="toolhead"><h1>Gioca</h1><p>Partite create all’istante e verificate: nei rompicapi la soluzione è sempre una sola, nel Mahjong la partita si può sempre risolvere. '+(state.settings.simple?'Con il profilo che hai scelto vedi i livelli Principiante e Facile.':'Cinque livelli, dal Principiante all’Esperto.')+' Niente pubblicità, niente dati inviati.</p></section>'+
     '<section class="daily"><h2>I giochi del giorno</h2><p class="evidence">Ogni giorno una partita nuova per ogni gioco, di livello '+(state.settings.simple?'Principiante':'Medio')+'.'+(S._streak?' Giorni di fila con almeno un gioco del giorno: <b>'+S._streak+'</b>.':'')+'</p><div class="dailyrow">'+
     Object.keys(GEN).map(function(g){ return '<a class="btn'+(dailyDone[g]?' on':'')+'" href="#p-'+g+'-'+(state.settings.simple?0:2)+'-d">'+(dailyDone[g]?'✓ ':'')+GEN[g].name+'</a>'; }).join('')+'</div></section><div class="gcards">';
-  var GROUPS=[['Numeri',['sudoku','hexadoku','futoshiki','suguru','numbrix','kakuro','ponti']],['Parole',['incastro','crucipuzzle','cifrato']],['Logica e spazio',['scacchi','matto','logica','labgioca','tangioca','penta','crucipixel','mahjong']],['Memoria e attenzione',['memory','kim','sequenze','corsi']]], placed={};
-  if(state.settings.simple) GROUPS=[['Per cominciare',['memory','kim','sequenze','sudoku','labgioca','crucipuzzle']],['Altri giochi',['corsi','tangioca','logica','incastro','futoshiki','suguru','numbrix','crucipixel','ponti','kakuro','cifrato','mahjong','penta','scacchi','matto','hexadoku']]];
+  var GROUPS=[['Numeri',['sudoku','hexadoku','futoshiki','suguru','numbrix','kakuro','ponti']],['Parole',['incastro','crucipuzzle','cifrato']],['Logica e spazio',['scacchi','matto','logica','labgioca','tangioca','penta','crucipixel','mahjong']],['Memoria e attenzione',['memory','kim','sequenze','corsi']],['Arte e colori',['colora','copia']]], placed={};
+  if(state.settings.simple) GROUPS=[['Per cominciare',['colora','memory','kim','sequenze','sudoku','labgioca','crucipuzzle']],['Altri giochi',['corsi','copia','tangioca','logica','incastro','futoshiki','suguru','numbrix','crucipixel','ponti','kakuro','cifrato','mahjong','penta','scacchi','matto','hexadoku']]];
   GROUPS.forEach(function(gr){ gr[1].forEach(function(g){ placed[g]=1; }); }); var rest=Object.keys(GEN).filter(function(g){ return !placed[g]; }); if(rest.length) GROUPS.push(['Altri',rest]);
   html+='</div>'; GROUPS.forEach(function(gr){ html+='<h2 class="ggroup">'+gr[0]+'</h2><div class="gcards">'; gr[1].filter(function(g){ return GEN[g]; }).forEach(function(g){ var G=GEN[g];
     html+='<section class="gcard"><div class="row" style="justify-content:space-between">'+(ICO[g]||'')+'<button class="btn small rulesbtn" data-r="'+g+'">? Regole</button></div><h3>'+G.name+'</h3><p class="evidence">'+G.desc+'</p><div class="lvls">'+
@@ -8171,6 +8897,23 @@ penta:{ cosa:'I miei pentamini', perche:'Dodici pezzi da cinque quadratini da in
     { t:'Forme che piacciono', p:['Oltre ai rettangoli, si possono riempire lettere, animali squadrati, una casa. Se la forma non ha soluzioni, prova a spostare qualche casella.'] } ],
   guida:['La forma è la struttura: tocca le caselle per aggiungerle o toglierle (il totale deve essere un multiplo di 5).','Oppure scegli una <b>Forma pronta</b>.','<b>Controlla</b>: l’app trova i pezzi e conta le soluzioni.'] },
 
+copia:{ cosa:'Il mio esercizio di copia', perche:'Guardare bene, contare, riportare: un esercizio antico per allenare lo sguardo e la mano, anche allo specchio.', controllo:'figura collegata, copia confrontata con il modello',
+  strategie:['Parti da un punto facile da ritrovare: un angolo o il centro.','Conta i punti: «due a destra, uno in giù».','Allo specchio, chiediti ogni volta: da che parte va questa linea nella copia?'],
+  lezioni:[
+    { t:'Un esercizio antico', p:['Copiare un disegno su una griglia è uno dei metodi più antichi per imparare a disegnare: i pittori del Rinascimento usavano la «quadrettatura» per riportare un disegno piccolo su una parete o una tela grande.','Copiare figure è anche un compito usato dai neuropsicologi (il più noto è la copia della figura complessa di Rey) per osservare come una persona guarda e riproduce lo spazio. Qui è un gioco: non è un test e non dà un giudizio sulla persona.'] },
+    { t:'Figure a punti', p:['La figura è fatta di linee tra punti vicini: in orizzontale, in verticale e, dal livello Facile, in diagonale. L’app ne crea una nuova ogni volta, spesso simmetrica, sempre tutta collegata e larga quasi quanto la griglia.','Le figure grandi o allo specchio sono più difficili: bisogna tenere a mente da che parte si va.'] },
+    { t:'Disegno con la griglia', p:['Si divide il disegno in quadretti, con lettere sulle colonne e numeri sulle righe. Poi si copia un quadretto alla volta (A1, A2…) nella griglia vuota.','Se la griglia vuota è più grande, il disegno si ingrandisce: è il modo classico per riportare un disegno su un foglio grande.'] },
+    { t:'Da un’immagine', p:['Puoi partire da una tua foto o da un’opera d’arte antica. L’app la trasforma in un disegno a contorni, la divide in quadretti e la stampa accanto alla griglia vuota.','Per usare le opere d’arte in un libretto, venduto o regalato, leggi prima, nella guida, la parte sui diritti delle immagini.'] } ],
+  guida:['La figura della partita è già nella parte Crea: puoi tenerla o cambiarla toccando i punti.','Spunta «Copia allo specchio» per un esercizio più difficile.','Con «Disegno con la griglia» scegli un tema o una tua immagine e quanti quadretti.','Stampa: modello e griglia vuota; la soluzione è su una pagina a parte.'] },
+colora:{ cosa:'Il mio disegno da colorare', perche:'Si colora con calma, sullo schermo o con le matite: ogni volta un disegno nuovo, anche da una tua foto.', controllo:'numeri leggibili e colori ben distinti',
+  strategie:['Comincia dal colore con più zone, oppure da quello che ti piace di più.','Le zone grigie sono quelle del colore scelto: così non le devi cercare.','Per le zone piccole ingrandisci il disegno; sul foglio, usa una matita appuntita.'],
+  lezioni:[
+    { t:'Da dove viene', p:['I quadri da dipingere con i numeri sono nati negli Stati Uniti intorno al 1950, da un’idea di Dan Robbins per la Palmer Paint Company di Detroit. Robbins raccontava di essersi ispirato a Leonardo da Vinci, che, secondo lui, numerava le parti della tela per gli allievi. Ebbero un successo enorme.','Oggi esistono come libri da colorare e come app, quasi sempre con disegni già pronti. Qui il disegno si crea ogni volta da zero.'] },
+    { t:'Come nasce un disegno', p:['L’app parte da una forma (un mandala, una vetrata, un paesaggio, dei fiori, delle geometrie) e la divide in zone. Ogni zona riceve un colore.','Poi i colori vengono ridotti a pochi colori, quelli della tavolozza: al massimo 6 al livello Principiante, fino a 24 al livello Esperto. Due colori troppo simili diventano uno solo, così non si confondono. Ogni colore riceve un numero.','Le zone troppo piccole per scriverci un numero leggibile vengono unite a una vicina.'] },
+    { t:'La tavolozza e l’armonia dei colori', p:['Colori vicini sul cerchio dei colori (per esempio giallo, arancione, rosso) danno un’impressione calda e tranquilla; colori opposti (blu e arancione) danno vivacità.','Il chiaro e lo scuro contano quanto il colore: un disegno con zone chiare e zone scure si legge meglio, anche stampato in bianco e nero.','Nella parte Crea puoi cambiare ogni colore. Controlla ti avvisa se due colori sono così simili da confondersi.'] },
+    { t:'Dalla tua foto', p:['Con «Oppure parti da una tua foto» l’app rimpicciolisce l’immagine, sceglie i colori principali e divide la foto in zone. Tutto avviene nel tuo dispositivo: la foto non viene inviata a nessuno.','Funzionano meglio foto con un soggetto grande e colori decisi: un fiore, un paesaggio, un animale, un oggetto. I volti vengono meno bene, perché i dettagli piccoli si perdono.','Puoi usare anche un’opera d’arte antica: un dipinto di Van Gogh o di Monet diventa un bellissimo disegno da colorare. Prendila da una fonte che ne indica la licenza, per esempio il sito di un museo. Prima di metterla in un libretto, venduto o anche regalato, leggi nella guida la parte sui diritti delle immagini: le opere dei musei pubblici italiani hanno regole particolari.','Usa foto tue, o di cui hai il permesso: se vuoi vendere il disegno, i diritti dell’immagine contano.'] },
+    { t:'Sul foglio', p:['La stampa ha il disegno con i numeri, la legenda con il nome di ogni colore e, se vuoi, il disegno colorato su un’altra pagina.','Carta: va bene quella normale da 80 g/m² per le matite; per i pennarelli è meglio una carta più spessa (da 120 g/m² in su), che non lascia passare il colore.','In un libretto stampato in bianco e nero i nomi dei colori nella legenda permettono di colorare lo stesso.'] } ],
+  guida:['Il disegno della partita è già nella parte Crea: puoi tenerlo così o cambiarlo.','Scegli tema e livello e premi «Disegno nuovo»; «Altri colori» cambia la tavolozza.','Tocca un quadratino della tavolozza per cambiare quel colore.','<b>Controlla</b> dice se i numeri si leggono e se ci sono colori troppo simili.'] },
 crucipixel:{ cosa:'Il mio crucipixel', perche:'Un disegno nascosto da ritrovare con i numeri ai margini.', controllo:'disegno ricostruibile solo ragionando',
   strategie:['I numeri dicono quanti gruppi di caselle colorate ci sono in una riga, e in che ordine.','Se in una riga di 10 c’è un 8, le 6 caselle centrali sono sicuramente colorate.','Segna con un puntino le caselle sicuramente bianche: aiutano quanto quelle colorate.'],
   lezioni:[
@@ -8228,7 +8971,7 @@ corsi:{ cosa:'Il mio percorso tra i blocchi', perche:'Ricordare un percorso tra 
 window.CORSI=CORSI;
 
 /* ===================== IL PERCORSO DI OGNI GIOCO: GIOCA → IMPARA → COME SI COSTRUISCE → CREA =====================
-   Per ognuno dei 22 giochi una pagina (#impara-<gioco>) che accompagna dal giocare al creare. La creazione non parte
+   Per ognuno dei 24 giochi una pagina (#impara-<gioco>) che accompagna dal giocare al creare. La creazione non parte
    da un foglio bianco: parte da una STRUTTURA già pronta (la partita appena giocata, oppure una partita nuova del
    livello scelto) che si apre nello strumento di Crea e si modifica passo per passo. I testi dei piccoli corsi sono
    in percorso-corsi.js (CORSI). */
@@ -8245,7 +8988,7 @@ var Percorso=(function(){
     incastro:{ tool:'incastro', conv:keepMode('incastro') }, crucipuzzle:{ tool:'crucipuzzle', conv:base('crucipuzzle') },
     cifrato:{ tool:'cifrato', conv:base('cifrato') }, logica:{ tool:'logica', conv:base('logica') },
     crucipixel:{ tool:'crucipixel', conv:base('crucipixel') }, mahjong:{ tool:'mahjong', conv:function(d){ var x=keepMode('mahjong')(d); x.mode='crea'; return x; } },
-    memory:{ tool:'memory', conv:base('memory') },
+    memory:{ tool:'memory', conv:base('memory') }, copia:{ tool:'copia', conv:function(d){ var x=base('copia')(d); x.kind='punti'; delete x.pu; delete x.sel; delete x.show; ['_p','_won','_day','title'].forEach(function(k){ delete x[k]; }); return x; } }, colora:{ tool:'colora', conv:function(d){ var x=base('colora')(d); x.view='col'; ['f','ff','my','sel','fsel','mode','hl','_p','_won','_day','title'].forEach(function(k){ delete x[k]; }); return x; } },
     kim:{ tool:'kim', conv:function(d){ var x=clone(TOOLS.kim.init()); ['n','k','mix','seed'].forEach(function(k){ if(d[k]!=null) x[k]=d[k]; }); return x; } },
     sequenze:{ tool:'sequenze', conv:function(d){ var x=clone(TOOLS.sequenze.init()); x.pads=d.pads; x.from=d.start; x.to=d.target; x.seed=d.seed; return x; } },
     corsi:{ tool:'corsi', conv:function(d){ var x=clone(TOOLS.corsi.init()); x.pads=d.pads; x.from=d.start; x.to=d.target; x.back=!!d.back; x.seed=d.seed; return x; } },
@@ -8311,17 +9054,18 @@ var Percorso=(function(){
       '<a class="btn small" href="#impara-'+g+'">'+(gd?'← Torna al percorso':'Gioca e impara a crearlo →')+'</a></div>'; }
   function attach(tool){ var html=panel(tool); if(!html) return; var side=document.querySelector('#app .side'); if(!side || side.querySelector('.pguide')) return; side.insertAdjacentHTML('afterbegin', html); }
 
-  // la home: il percorso in tre tempi e i 22 giochi
-  var GROUPS=[['Numeri',['sudoku','hexadoku','futoshiki','suguru','numbrix','kakuro','ponti']],['Parole',['incastro','crucipuzzle','cifrato']],['Logica e spazio',['scacchi','matto','logica','labgioca','tangioca','penta','crucipixel','mahjong']],['Memoria e attenzione',['memory','kim','sequenze','corsi']]];
+  // la home: il percorso in tre tempi e i 24 giochi
+  var GROUPS=[['Numeri',['sudoku','hexadoku','futoshiki','suguru','numbrix','kakuro','ponti']],['Parole',['incastro','crucipuzzle','cifrato']],['Logica e spazio',['scacchi','matto','logica','labgioca','tangioca','penta','crucipixel','mahjong']],['Memoria e attenzione',['memory','kim','sequenze','corsi']],['Arte e colori',['colora','copia']]];
   function home(){ var h='<section class="hero"><span class="label">Il laboratorio dei giochi da creare</span><h1>Gioca, impara, <span>crea</span>.</h1>'+
-      '<p>Per ognuno dei 22 giochi c’è un percorso: prima lo giochi, poi impari le regole e come si costruisce, infine crei il tuo partendo da una struttura pronta. L’app controlla, suggerisce e prepara la stampa. Ogni passo si annulla.</p>'+
+      '<p>Per ognuno dei 24 giochi c’è un percorso: prima lo giochi, poi impari le regole e come si costruisce, infine crei il tuo partendo da una struttura pronta. L’app controlla, suggerisce e prepara la stampa. Ogni passo si annulla.</p>'+
       '<ol class="tritempi"><li><b>Gioca</b><span>ogni partita è generata al momento, in cinque livelli</span></li><li><b>Impara</b><span>regole, esempi e un piccolo corso su come si costruisce</span></li><li><b>Crea</b><span>parti da una struttura e trasformala: poi stampa, condividi o fanne un libretto</span></li></ol>'+
       '<div class="row"><a class="btn primary" href="#gioca">Gioca subito</a><a class="btn" href="#crea">Tutti gli strumenti per creare</a><a class="btn" href="#guida">Come si usa</a></div></section>';
     GROUPS.forEach(function(gr){ h+='<h2 class="ggroup">'+gr[0]+'</h2><div class="pcards">'+gr[1].filter(function(g){ return GEN[g]; }).map(function(g){ var G=GEN[g];
       return '<a class="tool pcard" href="#impara-'+g+'">'+(ICO[g]||'')+'<h3>'+G.name+'</h3><p>'+G.desc+'</p><span class="pgo">Gioca · Impara · Crea →</span></a>'; }).join('')+'</div>'; });
+    h+='<section class="panel"><h2>Arte e benessere</h2><p>Colorare con i numeri disegni sempre nuovi (o una tua foto), creare mandala, disegnare con calma: e che cosa dicono davvero gli studi sull’arte e sul colorare.</p><div class="row"><a class="btn primary" href="#p-colora-0">Colora un disegno</a><a class="btn" href="#arte">Che cosa dicono gli studi</a></div></section>';
     h+='<section class="panel"><h2>Enigmi celebri</h2><p>I sette ponti di Königsberg, le tre porte, il sudoku con 17 indizi, il messaggio di Zodiac: rompicapi famosi <b>risolti e spiegati</b>, e problemi <b>ancora aperti</b> che forse qualcuno risolverà.</p><a class="btn" href="#enigmi">Scopri gli enigmi celebri</a></section>';
     h+='<section class="panel"><h2>Altri strumenti per creare</h2><p>Mandala, disegni da colorare, trova le differenze, cruciverba con le tue definizioni, rebus, giochi di squadra e <b>Crea un libro</b> per stampare, regalare o pubblicare un libretto: li trovi in <a href="#crea">Crea</a>.</p></section>'+
-      '<p class="note">Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.15.</p>';
+      '<p class="note">Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.21.</p>';
     app.innerHTML=h; }
 
   // un solo riquadro che spiega tutti i modi di portare fuori un gioco, sopra i pulsanti Condividi e Stampa
@@ -8352,6 +9096,73 @@ document.addEventListener('click', function(e){ var b=e.target.closest && e.targ
   var w=setInterval(function(){ if(!window.speechSynthesis || !speechSynthesis.speaking){ clearInterval(w); b.setAttribute('aria-pressed','false'); b.textContent='🔊 Leggi'; } }, 800); });
 // i link «nella guida» portano direttamente alla sezione giusta
 document.addEventListener('click', function(e){ var a=e.target.closest && e.target.closest('a[data-guida]'); if(a) window.GUIDE_JUMP=a.dataset.guida; });
+
+/* ===================== ARTE E BENESSERE: che cosa dicono gli studi, i colori, gli esercizi =====================
+   Una pagina (#arte) onesta: non è arteterapia; riassume gli studi controllati il 8 novembre 2026,
+   con i loro limiti, e propone esercizi con i colori e collegamenti alle attività dell'app. */
+var Arte=(function(){
+  var RD='<button class="btn small rd" data-read aria-label="Leggi ad alta voce questa parte">🔊 Leggi</button>';
+  function sec(id, title, body){ return '<section class="gsec" id="ar-'+id+'"><div class="rdhead"><h2>'+title+'</h2>'+RD+'</div>'+body+'</section>'; }
+  function src(t, url){ return '<a href="'+url+'" target="_blank" rel="noopener">'+t+'</a>'; }
+  // il cerchio dei colori con le armonie
+  var HARM={ analoghi:{ n:'Colori vicini (analoghi)', d:[0,30,60], t:'Tre o quattro colori vicini sul cerchio: un effetto calmo e armonioso, come un tramonto o un bosco.' },
+    complementari:{ n:'Colori opposti (complementari)', d:[0,180], t:'Due colori uno di fronte all’altro: si fanno risaltare a vicenda. Usane uno per lo sfondo e uno per i dettagli.' },
+    triade:{ n:'Tre colori a distanza uguale (triade)', d:[0,120,240], t:'Un effetto vivace ma equilibrato. Funziona bene se uno dei tre domina e gli altri due accompagnano.' },
+    caldi:{ n:'Caldi e freddi', d:[0,30,50,200,230], t:'Rossi, arancioni e gialli sembrano venire avanti; blu e verdi sembrano allontanarsi. Nei paesaggi le montagne lontane sono più chiare e più azzurre.' } };
+  function wheel(h0, kind){ var s='<svg viewBox="-110 -110 220 220" width="220" role="img" aria-label="Cerchio dei colori">', n=24;
+    for(var i=0;i<n;i++){ var a0=(i/n)*Math.PI*2-Math.PI/2, a1=((i+1)/n)*Math.PI*2-Math.PI/2, r0=55, r1=100, c=ColoraCore.hex(ColoraCore.hsl(i*360/n, 0.75, 0.55));
+      s+='<path d="M'+(r0*Math.cos(a0)).toFixed(1)+' '+(r0*Math.sin(a0)).toFixed(1)+'L'+(r1*Math.cos(a0)).toFixed(1)+' '+(r1*Math.sin(a0)).toFixed(1)+'A100 100 0 0 1 '+(r1*Math.cos(a1)).toFixed(1)+' '+(r1*Math.sin(a1)).toFixed(1)+'L'+(r0*Math.cos(a1)).toFixed(1)+' '+(r0*Math.sin(a1)).toFixed(1)+'A55 55 0 0 0 '+(r0*Math.cos(a0)).toFixed(1)+' '+(r0*Math.sin(a0)).toFixed(1)+'Z" fill="'+c+'" stroke="#fff" stroke-width="1"/>'; }
+    HARM[kind].d.forEach(function(dd){ var a=((h0+dd)/360)*Math.PI*2-Math.PI/2; s+='<circle cx="'+(78*Math.cos(a)).toFixed(1)+'" cy="'+(78*Math.sin(a)).toFixed(1)+'" r="11" fill="none" stroke="#111" stroke-width="3"/>'; });
+    return s+'</svg>'; }
+  function swatches(h0, kind){ return '<div class="row">'+HARM[kind].d.map(function(dd){ var c=ColoraCore.hex(ColoraCore.hsl(h0+dd, 0.7, 0.55)), c2=ColoraCore.hex(ColoraCore.hsl(h0+dd, 0.6, 0.78)), c3=ColoraCore.hex(ColoraCore.hsl(h0+dd, 0.6, 0.32)); return '<span class="arsw" style="background:'+c3+'"></span><span class="arsw" style="background:'+c+'"></span><span class="arsw" style="background:'+c2+'"></span>'; }).join('<span style="width:10px"></span>')+'</div>'; }
+
+  function page(){
+    var h='<section class="toolhead"><h1>Arte e benessere</h1><p>Colorare, disegnare con calma, scegliere i colori: attività belle da fare da soli o insieme. Qui trovi che cosa dicono davvero gli studi, con i loro limiti, e qualche esercizio con i colori.</p>'+
+      '<nav class="psteps" aria-label="Le parti della pagina"><a href="#arte" data-go="non">Non è arteterapia</a><a href="#arte" data-go="studi">Gli studi</a><a href="#arte" data-go="colori">I colori</a><a href="#arte" data-go="esercizi">Esercizi</a><a href="#arte" data-go="immagini">Immagini libere</a><a href="#arte" data-go="materiali">Materiali</a></nav></section><div class="gbody arte">';
+    h+=sec('non','Prima di tutto: questa non è arteterapia',
+      '<p>L’<b>arteterapia</b> è un percorso condotto da un arteterapeuta con una formazione specifica, che usa il disegno, il colore e le immagini dentro una relazione di cura, con obiettivi precisi. Un’app non può offrirla.</p>'+
+      '<p>Le attività di questa sezione sono <b>attività artistiche</b> da fare per piacere e per stare bene: colorare, disegnare motivi, creare mandala. Se pensi che l’arteterapia possa aiutare te o una persona che assisti, rivolgiti a un professionista o al servizio sanitario.</p>');
+    h+=sec('studi','Che cosa dicono gli studi',
+      '<p class="evidence">Ricerca controllata l’8 novembre 2026. Le etichette dell’app («Studi controllati», «Studi preliminari», «Per analogia») dicono che tipo di studi esiste, non quanto un’attività funzioni.</p>'+
+      '<h3>Colorare, soprattutto i mandala</h3><p>Diversi studi controllati trovano che colorare per 15–20 minuti riduce l’ansia e aumenta la calma subito dopo. Per esempio Holt e colleghi, in due esperimenti con circa 50 studenti ciascuno, hanno visto meno ansia, più calma e un’attenzione migliore dopo 20 minuti passati a colorare un mandala, rispetto a 20 minuti di lettura ('+src('Holt, Furbert e Sweetingham, «Art Therapy»','https://uwe-repository.worktribe.com/OutputFile/848028')+'). In uno '+src('studio controllato del 2020 a Taiwan','https://pmc.ncbi.nlm.nih.gov/articles/PMC6996682/')+' (Koo e colleghi), con 120 adulti tra 55 e 75 anni, dopo 20 minuti l’ansia era più bassa che nel gruppo di controllo solo in chi aveva colorato un mandala; non in chi aveva colorato un motivo a quadretti né in chi aveva disegnato liberamente. Una '+src('meta-analisi del 2026','https://avesis.uludag.edu.tr/publication/details/601c6c54-ad35-4828-b5b3-50d3663a60cd/the-effectiveness-of-mandala-coloring-on-the-psychological-and-physiological-symptoms-in-adult-hospitalized-patients-a-meta-analysis')+' (Pehlivan ed Erbay Dallı) su 17 studi con 987 pazienti ricoverati trova meno ansia e meno stress e più benessere dopo aver colorato mandala, ma nessun effetto su dolore, stanchezza e nausea; gli autori giudicano bassa la qualità delle prove.</p>'+
+      '<p><b>I limiti</b>: i gruppi sono piccoli e spesso fatti di studenti universitari; gli effetti si misurano con questionari, subito dopo l’attività; non si sa quanto durino. Spesso il confronto è con un’attività qualunque (leggere), quindi una parte dell’effetto può venire semplicemente dalla pausa.</p>'+
+      '<h3>Quanta struttura?</h3><p>Una '+src('rassegna di Nicola Holt','https://uwe-repository.worktribe.com/OutputFile/9294488')+' nota che il disegno completamente libero non sempre calma: per alcune persone è impegnativo. Ma anche troppa struttura non aiuta: in uno studio, colorare con colori già decisi da altri non ha dato benefici. Sembra servire una <b>giusta dose di struttura</b>, con un po’ di libertà di scelta.</p>'+
+      '<p>Per questo, nel gioco «Colorare con i numeri», puoi scegliere tra tre modi: <b>Con i numeri</b> (tutto deciso), <b>Colori miei</b> (le zone con lo stesso numero hanno lo stesso colore, ma il colore lo scegli tu) e <b>Libero</b> (nessun numero: è il modo più vicino agli studi sui mandala).</p>'+
+      '<h3>Colorare con i numeri</h3><p>Nella ricerca dell’8 novembre 2026 non sono emersi studi specifici. L’etichetta è quindi «Per analogia»: somiglia al colorare, ma con più struttura.</p>'+
+      '<h3>Arteterapia e demenza</h3><p>La '+src('revisione Cochrane del 2018','https://www.cochrane.org/CD011073/DEMENTIA_inconclusive-findings-effects-art-therapy-people-dementia')+' (Deshmukh, Holmes e Cardno) ha trovato solo 2 studi controllati, con 60 persone analizzate: le prove sono insufficienti per dire se l’arteterapia aiuti le persone con demenza, e la loro certezza è molto bassa. Una '+src('meta-analisi del 2023','https://pubmed.ncbi.nlm.nih.gov/37782974')+' su 15 studi in cui la persona con demenza e chi la assiste fanno attività artistiche insieme trova meno disturbi del comportamento e meno fatica per chi assiste, ma nessun effetto su depressione e qualità della vita; anche qui servono studi più grandi.</p>'+
+      '<h3>Le arti in generale</h3><p>Nel 2019 l’Organizzazione Mondiale della Sanità ha pubblicato una '+src('rassegna di Fancourt e Finn','https://www.who.int/europe/publications/i/item/9789289054553')+' che ha individuato oltre 3000 studi sul ruolo delle arti nella salute e nel benessere ('+src('versione italiana','https://ancitoscana.it/wp-content/uploads/2025/09/Report-Who-Euro-Le-evidenze-sul-ruolo-delle-arti-nel-miglioramento-della-salute-e-del-benessere.pdf')+'). È una rassegna di mappatura (scoping review): descrive quanta ricerca c’è e in quali campi, ma mette insieme studi molto diversi tra loro e non misura quanto grande sia l’effetto.</p>'+
+      '<p><b>In sintesi</b>: colorare e disegnare sono attività piacevoli, sicure e alla portata di tutti, con segnali positivi soprattutto sull’ansia nel breve periodo. Non sono una cura e non sostituiscono medici, psicologi e terapeuti.</p>');
+    var h0=20;
+    h+=sec('colori','I colori: piccole lezioni',
+      '<h3>Il cerchio dei colori</h3><p>I colori disposti in cerchio aiutano a scegliere quali stanno bene insieme. Prova le armonie: il cerchio segna i colori scelti, sotto vedi ognuno in tre versioni (scura, piena, chiara).</p>'+
+      '<div class="row" id="ar-harm">'+Object.keys(HARM).map(function(k,i){ return '<button class="btn small" data-h="'+k+'" aria-pressed="'+(i===0)+'">'+HARM[k].n+'</button>'; }).join('')+'<button class="btn small" id="ar-rot">Gira il cerchio ↻</button></div>'+
+      '<div class="arwheel"><div id="ar-wheel">'+wheel(h0,'analoghi')+'</div><div><p id="ar-ht">'+HARM.analoghi.t+'</p><div id="ar-sw">'+swatches(h0,'analoghi')+'</div></div></div>'+
+      '<h3>Chiaro e scuro</h3><p>Conta quanto il colore. Un disegno con zone chiare accanto a zone scure si legge bene da lontano, e anche stampato in bianco e nero. Un trucco: socchiudi gli occhi davanti al disegno; se tutto sembra dello stesso grigio, aggiungi un colore più scuro o più chiaro.</p>'+
+      '<h3>Pochi colori, ripetuti</h3><p>Spesso un disegno è più bello con pochi colori ripetuti che con tanti colori tutti diversi. Le tavolozze dell’app usano questo principio: ai livelli bassi 6 colori, ai livelli alti fino a 24, con sfumature dello stesso colore.</p>');
+    h+=sec('esercizi','Esercizi',
+      '<ol class="rlist">'+
+      '<li><b>Lo stesso disegno, due armonie.</b> Apri un <a href="#p-colora-0">disegno da colorare</a>, scegli «Colori miei» e colora con colori vicini; poi stampalo, o rifallo, con colori opposti. Quale ti piace di più? Che sensazione ti danno?</li>'+
+      '<li><b>Il mandala libero.</b> In «Colorare con i numeri», modo «Libero», colora un mandala come vuoi, senza fretta, per 15–20 minuti. È l’attività più vicina a quella studiata.</li>'+
+      '<li><b>La scala del chiaro.</b> Su un foglio disegna 5 quadratini in fila e colorali con la stessa matita, premendo sempre di più: dal più chiaro al più scuro.</li>'+
+      '<li><b>Caldo e freddo.</b> Colora un paesaggio usando colori caldi solo davanti e colori freddi solo in lontananza: vedrai il paesaggio diventare più profondo.</li>'+
+      '<li><b>Crea il tuo mandala.</b> Con <a href="#mandala">Mandala e simmetria</a> disegni in uno spicchio e il disegno si ripete tutto intorno; poi stampalo e coloralo.</li>'+
+      '<li><b>Motivi lenti.</b> Con il <a href="#motivi">disegno meditativo a motivi</a> riempi un riquadro con un segno semplice ripetuto, senza gomma.</li>'+
+      '<li><b>La tua foto, o un capolavoro.</b> In <a href="#colora">Crea → Colorare con i numeri</a> trasforma una tua foto (un fiore, il mare, il tuo animale) o un dipinto antico in un disegno da colorare. Prima di metterlo in un libretto, venduto o anche regalato, leggi nella <a href="#guida" data-guida="arte">guida</a> la parte sui diritti delle immagini.</li>'+
+      '<li><b>Copiare per vedere meglio.</b> Con <a href="#copia">Copia con la griglia</a> ricopia una figura a punti, poi prova la stessa allo specchio; oppure copia un disegno quadretto per quadretto, ingrandendolo.</li></ol>'+
+      '<h3>Per chi accompagna</h3><ul><li>Non c’è un modo giusto di colorare: evita di correggere o di giudicare i colori scelti.</li><li>Meglio poco e spesso: anche 10–15 minuti vanno bene.</li><li>Per chi ha la vista stanca o le mani poco ferme: livello Principiante (zone grandi), pennarelli a punta grossa, il disegno stampato grande. Sullo schermo, nelle impostazioni, c’è il profilo «Mani tremanti».</li><li>Fare insieme conta: colorare in due lo stesso disegno può diventare un momento di conversazione.</li></ul>');
+    h+=sec('immagini','Immagini libere da colorare','<p>Alcuni musei rendono disponibili immagini di opere di pubblico dominio, utilizzabili anche per creare disegni da colorare. Una stampa di Hokusai o un’illustrazione botanica dell’Ottocento diventano disegni da colorare (con i numeri o a scelta libera) o da copiare con la griglia. Verifica sempre i diritti della singola immagine.</p>'+ColoraView.sources(false));
+    h+=sec('materiali','Materiali e carta',
+      '<ul><li><b>Matite colorate</b>: le più semplici da controllare; vanno bene su carta normale da 80 g/m².</li><li><b>Pennarelli</b>: colori vivi, ma possono passare dall’altra parte del foglio: meglio una carta da 120–160 g/m², o stampare su un solo lato.</li><li><b>Pastelli a cera</b>: adatti alle zone grandi (livello Principiante) e a chi ha le mani poco ferme.</li><li><b>Acquerelli</b>: servono una carta da acquerello (almeno 200 g/m²) e zone grandi.</li><li>In un libretto stampato in bianco e nero, la legenda con i <b>nomi dei colori</b> permette di colorare lo stesso.</li></ul>');
+    h+='<p class="evidence">Questa pagina riassume studi pubblicati e controllati il 8 novembre 2026. Non è un parere medico.</p></div>';
+    app.innerHTML=h;
+    app.querySelectorAll('[data-go]').forEach(function(a){ a.onclick=function(e){ e.preventDefault(); var t=$('ar-'+a.dataset.go); if(t) t.scrollIntoView({ block:'start' }); }; });
+    var cur='analoghi', hh=h0;
+    function upd(){ $('ar-wheel').innerHTML=wheel(hh,cur); $('ar-ht').textContent=HARM[cur].t; $('ar-sw').innerHTML=swatches(hh,cur); app.querySelectorAll('[data-h]').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.h===cur); }); }
+    app.querySelectorAll('[data-h]').forEach(function(b){ b.onclick=function(){ cur=b.dataset.h; upd(); }; });
+    $('ar-rot').onclick=function(){ hh=(hh+45)%360; upd(); };
+  }
+  return { page:page };
+})();
 
 /* ===================== ENIGMI CELEBRI: RISOLTI E SPIEGATI, E ANCORA APERTI (#enigmi) =====================
    Storie vere, con le date e i nomi documentati. Le soluzioni sono nascoste in <details>, così chi vuole può
@@ -8457,7 +9268,7 @@ var Enigmi=(function(){
 
 /* ===================== CREA UN LIBRO: raccolta di giochi pronta per la stampa e per Amazon KDP ===================== */
 (function(){
-var BOOK_GAMES=['sudoku','hexadoku','futoshiki','suguru','numbrix','kakuro','ponti','logica','crucipixel','incastro','crucipuzzle','cifrato','labgioca','matto'];
+var BOOK_GAMES=['sudoku','hexadoku','futoshiki','suguru','numbrix','kakuro','ponti','logica','crucipixel','incastro','crucipuzzle','cifrato','labgioca','matto','colora','copia'];
 var FORMATS={ a4:{ name:'A4 (21×29,7 cm; accettato anche da KDP)', w:'210mm', h:'297mm', m:'18mm' }, us:{ name:'8,5×11 pollici (KDP)', w:'8.5in', h:'11in', m:'0.75in' }, mid:{ name:'6×9 pollici (KDP)', w:'6in', h:'9in', m:'0.6in' } };
 var INTRO='Questo libro raccoglie giochi da risolvere con calma, una pagina alla volta. Nei rompicapi che lo richiedono la soluzione è una sola, controllata dall’app; le soluzioni sono in fondo al libro.\n\nCome usarlo: scegli un gioco al giorno, anche breve; se ti blocchi, lascialo e riprendilo più tardi. Non c’è fretta e non ci sono voti.\n\nChe cosa dicono gli studi: giochi come questi allenano soprattutto le abilità che si usano per risolverli. Sono un ottimo modo per tenere la mente attiva e per stare bene, ma non sostituiscono le cure né l’aiuto di medici, terapisti e insegnanti.';
 function fakeCtx(d){ var w=document.createElement('div'); return { d:d, ui:{ printing:true }, work:w, tremor:false, change:function(f){ f(); }, quiet:function(f){ f(); }, persist:function(){}, render:function(){}, result:function(){}, field:function(){} }; }
@@ -8587,7 +9398,7 @@ TOOLS.libro={ id:'libro', title:'Crea un libro', defTitle:'Il mio libro di gioch
    funzioni di generazione di Gioca, copiate dal loro testo: così il codice resta uno solo. Se il browser non
    permette il lavoratore, si calcola come prima nella pagina. */
 var WG=(function(){
-  var GAMES=['sudoku','kakuro','ponti','hexadoku','futoshiki','suguru','numbrix','matto','incastro','logica','mahjong','crucipixel'];
+  var GAMES=['sudoku','kakuro','ponti','hexadoku','futoshiki','suguru','numbrix','matto','incastro','logica','mahjong','crucipixel','colora','copia'];
   var w=null, broken=false, seq=0, waiting={};
   function source(){
     var gen=GAMES.filter(function(g){ return GEN[g]; }).map(function(g){ return JSON.stringify(g)+':{ make:'+GEN[g].make.toString()+' }'; }).join(',\n');
@@ -8685,11 +9496,11 @@ window.AM={ GEN:GEN, TOOLS:TOOLS, G_LEVELS:G_LEVELS, WG:WG, Dict:Dict, cores:{ S
 /* ===================== GUIDA: COME SI USA ===================== */
 function renderGuide(){
   var sec=function(id, t, body){ return '<section class="gsec" id="g-'+id+'"><div class="rdhead"><h2>'+t+'</h2><button class="btn small rd" data-read aria-label="Leggi ad alta voce questa parte">🔊 Leggi</button></div>'+body+'</section>'; };
-  var toc=[['cose','Che cos’è AttivaMente'],['percorso','Gioca, impara, crea'],['crea','Creare un gioco'],['esporta','Esportare e condividere'],['libretto','Il tuo libretto'],['salva','Salvare e ritrovare i lavori'],['stampa','Stampare e fare un PDF'],['condividi','Condividere un gioco da giocare'],['installa','Installarla sul telefono'],['accesso','Accessibilità'],['prove','Che cosa dicono gli studi'],['demenza','Demenza e difficoltà cognitive'],['squadra','Giochi di squadra'],['privacy','Privacy e limiti'],['faq','Domande frequenti']];
+  var toc=[['cose','Che cos’è AttivaMente'],['percorso','Gioca, impara, crea'],['crea','Creare un gioco'],['esporta','Esportare e condividere'],['libretto','Il tuo libretto'],['salva','Salvare e ritrovare i lavori'],['stampa','Stampare e fare un PDF'],['condividi','Condividere un gioco da giocare'],['installa','Installarla sul telefono'],['accesso','Accessibilità'],['arte','Colorare, copiare, immagini'],['prove','Che cosa dicono gli studi'],['demenza','Demenza e difficoltà cognitive'],['squadra','Giochi di squadra'],['privacy','Privacy e limiti'],['faq','Domande frequenti']];
   var html='<section class="toolhead"><h1>Come si usa</h1><p>Tutto quello che serve per creare, stampare e regalare i giochi. Si legge in dieci minuti; puoi anche saltare direttamente alla parte che ti interessa.</p></section><div class="guide"><nav class="gtoc" aria-label="Indice"><ol>'+toc.map(function(x){ return '<li><a href="#guida" data-g="'+x[0]+'">'+x[1]+'</a></li>'; }).join('')+'</ol></nav><div class="gbody">'+
   sec('cose','Che cos’è AttivaMente','<p>È un laboratorio per <b>giocare, imparare e creare</b> giochi. Si comincia giocando; poi si impara come è costruito il gioco; infine si crea il proprio. I giochi sono: labirinti, mandala, cruciverba, sudoku, Mahjong e molti altri. Non è un’app che fa giocare al posto tuo: sei tu a disegnare, scegliere le parole, costruire lo schema. L’app fa il lavoro noioso e rigoroso: controlla che il gioco rispetti le regole e, nei rompicapi che lo richiedono, che la soluzione sia una sola; prepara la stampa e la soluzione.</p><p>Funziona su telefono, tablet e computer, gratis, senza account e senza pubblicità.</p>')+
   sec('gioca','Giocare','<p>Nella pagina <a href="#gioca">Gioca</a> trovi partite create all\u2019istante e verificate (nei rompicapi la soluzione è una sola), in cinque livelli: Principiante, Facile, Medio, Difficile, Esperto. Ogni giorno c\u2019è anche il gioco del giorno, uguale per tutti. Ci sono rompicapi di numeri (sudoku, Hexadoku, Futoshiki, Suguru, Numbrix, Kakuro, Ponti), di parole (parole a incastro, crucipuzzle, crittografato), di logica e di spazio (enigma logico, labirinto, tangram, pentamini, crucipixel), tre giochi di memoria (Che cosa manca?, Sequenze, Blocchi di Corsi) e il Mahjong, che all\u2019Esperto usa il doppio mazzo da 288 tessere. Quasi tutti si possono anche creare: in Crea trovi lo stesso gioco con gli strumenti per progettarlo, verificarlo e stamparlo. Le statistiche (partite vinte, tempo migliore) restano solo sul tuo dispositivo. In ogni gioco il pulsante <b>? Come si gioca</b> spiega le regole e, in quasi tutti i giochi, mostra un esempio risolto passo passo.</p>')+
-  sec('percorso','Gioca, impara, crea','<p>Per ognuno dei 22 giochi c’è un <b>percorso</b> in quattro tappe (lo apri dalla pagina <a href="#home">Inizia</a> o dal link «Impara a crearlo» in Gioca):</p><ol class="gsteps"><li><b>Gioca</b>: ogni partita viene creata al momento, dal Principiante all’Esperto.</li><li><b>Impara le regole</b>: lo scopo, le regole, un esempio passo passo e come si ragiona.</li><li><b>Come si costruisce</b>: un piccolo corso su che cosa rende buono quel gioco e come lo prepara chi lo inventa.</li><li><b>Crea il tuo</b>: non parti da un foglio bianco (tranne negli scacchi, dove prepari tu una posizione nuova su una scacchiera vuota). L’app apre in Crea una <b>struttura pronta</b> (la partita che hai appena giocato, oppure una nuova del livello che scegli) e tu la trasformi; l’app controlla ogni passo.</li></ol><p>Anche durante una partita trovi il pulsante <b>Crealo tu</b>.</p>')+
+  sec('percorso','Gioca, impara, crea','<p>Per ognuno dei 24 giochi c’è un <b>percorso</b> in quattro tappe (lo apri dalla pagina <a href="#home">Inizia</a> o dal link «Impara a crearlo» in Gioca):</p><ol class="gsteps"><li><b>Gioca</b>: ogni partita viene creata al momento, dal Principiante all’Esperto.</li><li><b>Impara le regole</b>: lo scopo, le regole, un esempio passo passo e come si ragiona.</li><li><b>Come si costruisce</b>: un piccolo corso su che cosa rende buono quel gioco e come lo prepara chi lo inventa.</li><li><b>Crea il tuo</b>: non parti da un foglio bianco (tranne negli scacchi, dove prepari tu una posizione nuova su una scacchiera vuota). L’app apre in Crea una <b>struttura pronta</b> (la partita che hai appena giocato, oppure una nuova del livello che scegli) e tu la trasformi; l’app controlla ogni passo.</li></ol><p>Anche durante una partita trovi il pulsante <b>Crealo tu</b>.</p>')+
   sec('crea','Creare un gioco','<ol class="gsteps"><li><b>Scegli un gioco</b> dalla pagina <a href="#home">Giochi</a>. I giochi sono divisi in famiglie: Disegno e spazio, Parole, Numeri logica e tavolo, Squadra.</li><li><b>Segui il riquadro Passo passo</b> a destra (sul telefono, sotto il foglio). Con il pulsante a forma di altoparlante le istruzioni vengono lette ad alta voce.</li><li><b>Crea</b>: tocca, disegna, scrivi. Puoi provare e correggere: <b>Annulla</b> torna indietro di un passo, <b>Ripeti</b> lo rifà, <b>Ricomincia da capo</b> dà un foglio nuovo (e anche quello si annulla).</li><li><b>Premi Controlla</b>: l’app ti dice se il gioco funziona e, se no, che cosa sistemare. Per esempio: la strada del labirinto arriva all’uscita? Il sudoku ha una sola soluzione? Le parole del cruciverba esistono?</li><li><b>Dai un titolo e una dedica</b> nel riquadro "Per chi è?": compaiono in cima al foglio stampato.</li></ol><p class="evidence">Alcuni giochi usano il dizionario italiano (cruciverba a schema, crittografato, anagrammi, ruota di lettere). La prima volta serve la connessione per scaricarlo (circa 3 MB); poi resta sul dispositivo.</p>')+
   sec('esporta','Esportare e condividere','<p>In ogni strumento di Crea il riquadro <b>Esporta e condividi</b> riassume tutti i modi per portare fuori un gioco:</p><ul><li><b>Su carta</b>: Stampa. Esce un foglio pulito, con la soluzione su una pagina a parte.</li><li><b>In PDF</b>: Stampa e, come stampante, scegli «Salva come PDF». Il PDF si manda per email o WhatsApp e si stampa anche in copisteria.</li><li><b>Da giocare sullo schermo</b>: Crea il link da giocare; con il QR code il link si stampa su un biglietto.</li><li><b>Come immagine</b>: Scarica immagine (un file SVG, che si inserisce in documenti e presentazioni).</li><li><b>In un libretto</b>: salva i tuoi giochi e raccoglili con <a href="#libro">Crea un libro</a>.</li><li><b>Su un altro dispositivo</b>: I miei lavori → Esporta file, poi Importa.</li></ul>')+
   sec('libretto','Il tuo libretto: crearlo, regalarlo, venderlo','<h3>Crearlo</h3><ol class="gsteps"><li><b>Crea i giochi</b> seguendo i percorsi (pagina <a href="#home">Inizia</a>) e premi <b>Salva nei miei lavori</b> per ognuno. Usa temi, nomi e parole di chi lo riceverà: è questo che rende un libretto unico.</li><li>Apri <a href="#libro">Crea un libro</a>: spunta i giochi che hai creato tu e, se vuoi, aggiungi giochi nuovi creati dall’app. Scrivi titolo, sottotitolo, autore; <b>riscrivi l’introduzione con parole tue</b> (quella proposta è solo un esempio). Scegli il formato.</li><li>Premi <b>Prepara il libro</b> e guarda l’anteprima; <b>Controlla</b> ti avverte se mancano pagine o se i margini non bastano per KDP.</li><li><b>Stampa → Salva come PDF</b>, con margini «Nessuno» e grafica di sfondo attiva. Le soluzioni sono in fondo al libro. Apri sempre il PDF e sfoglialo tutto prima di usarlo.</li></ol>'+
@@ -8710,6 +9521,13 @@ function renderGuide(){
   sec('condividi','Condividere un gioco da giocare','<p>In sudoku, Mahjong, cruciverba, crittografato, crucipuzzle, enigma logico, Kakuro, Ponti, crucipixel e anagrammi c’è il riquadro <b>Condividi da giocare</b>.</p><ol class="gsteps"><li>Premi <b>Crea il link da giocare</b>.</li><li>Scegli come mandarlo: <b>Copia il link</b> (e incollalo in un messaggio), <b>Invia…</b> (apre WhatsApp, email e le altre app del telefono) oppure <b>Mostra il QR code</b> (da stampare su un biglietto, un invito, una scheda del corso).</li><li>Chi lo apre trova il gioco pronto: può risolverlo sullo schermo, controllare, vedere la soluzione solo se la chiede, stamparlo. I suoi progressi restano salvati sul suo telefono.</li></ol><p class="evidence">Il gioco viaggia dentro il link: non passa da nessun server e non viene salvato da nessuna parte. Per lo stesso motivo, chi riceve il link potrebbe in teoria ricavarne la soluzione: va benissimo per giocare, non per gare o esami.</p>')+
   sec('installa','Installarla sul telefono','<p>AttivaMente si installa come un’app, senza passare dagli store, e dopo la prima apertura funziona anche senza connessione.</p><ul><li><b>Android (Chrome):</b> apri l’indirizzo dell’app, tocca i tre puntini in alto a destra, poi <b>Installa app</b> o <b>Aggiungi a schermata Home</b>.</li><li><b>iPhone e iPad (Safari):</b> tocca il pulsante Condividi (il quadrato con la freccia), poi <b>Aggiungi alla schermata Home</b>.</li><li><b>Computer (Chrome o Edge):</b> nella barra dell’indirizzo compare l’icona Installa.</li></ul>')+
   sec('accesso','Accessibilità','<p>Nella pagina <a href="#accessibilita">Accessibilità</a> scegli una volta come preferisci lavorare; vale per tutti i giochi.</p><ul><li><b>Profili pronti</b>, per esempio "Mani tremanti", "Passo passo" o "Con calma" (per chi ha difficoltà di memoria o di attenzione).</li><li><b>Testo grande</b> e <b>molto grande</b>, <b>contrasto alto</b>, <b>nessuna animazione</b>.</li><li><b>Mani tremanti:</b> si tocca invece di trascinare, i comandi diventano più grandi, le linee vengono ammorbidite.</li><li><b>Lettura ad alta voce</b> delle istruzioni.</li><li><b>Solo tastiera e lettore di schermo:</b> con Tab arrivi sul foglio di gioco; le frecce spostano un riquadro arancione sulla casella, tessera o carta vicina, e il lettore di schermo dice dove sei (per esempio “Riga 3, colonna 5: vuota”); Invio o Spazio la scelgono; i numeri e le lettere si scrivono direttamente. Nel labirinto le frecce fanno avanzare la strada. Le finestre si chiudono con Esc.</li><li>Nel sudoku puoi usare <b>forme colorate</b> al posto dei numeri; nel Mahjong le <b>tessere facili</b> con numeri e colori grandi; nella dama colori che si distinguono anche con il daltonismo.</li></ul>')+
+  sec('arte','Colorare con i numeri e Arte e benessere','<p>In <a href="#p-colora-0">Colorare con i numeri</a> ogni disegno è nuovo (mandala, vetrata, paesaggio, fiori, geometrie) ed è diviso in zone con il numero del colore. Si colora in tre modi: <b>Con i numeri</b>, <b>Colori miei</b> (lo stesso numero, un colore scelto da te) e <b>Libero</b> (senza numeri). Nella parte <a href="#colora">Crea</a> puoi trasformare anche una tua foto: resta nel tuo dispositivo e non viene inviata a nessuno.</p><p>Stampato, il disegno ha la legenda con il nome di ogni colore, così si può colorare anche da un libretto in bianco e nero. La pagina <a href="#arte">Arte e benessere</a> riassume gli studi sul colorare e sull’arteterapia, con i loro limiti, e propone esercizi con i colori.</p><p><a href="#copia">Copia con la griglia</a> ha due esercizi: le <b>figure a punti</b> da ricopiare (anche allo specchio), che si giocano anche sullo schermo, e il <b>disegno con la griglia</b>, da fare sulla carta, per copiare e ingrandire un disegno o una tua immagine quadretto per quadretto.</p>'+
+    '<h3>Immagini e opere d’arte: i diritti</h3><p>In Colorare con i numeri e in Copia con la griglia puoi usare una tua foto o un’immagine scaricata, per esempio un dipinto antico.</p><ul>'+
+    '<li><b>Per colorare o copiare per conto tuo</b>, usa preferibilmente foto tue, immagini di pubblico dominio o immagini la cui licenza permette questo uso. La legge prevede alcune eccezioni per l’uso personale, ma non valgono per qualunque immagine o trasformazione. Non diffondere il disegno senza averne verificato i diritti.</li>'+
+    '<li><b>Per un libretto, venduto ma anche regalato</b>, stampi e distribuisci copie dell’immagine: serve una licenza o un’altra base che permetta proprio quell’uso, cioè la riproduzione e la distribuzione, e, se vendi, anche l’uso commerciale. Vanno bene le tue foto, le opere di pubblico dominio da fonti che lo dichiarano, o immagini con una licenza adatta. Le fonti più sicure sono i musei che pubblicano le immagini delle opere antiche libere anche per l’uso commerciale (elenco qui sotto). Controlla sempre che la singola immagine sia segnata come CC0 o di pubblico dominio.</li>'+
+    '<li><b>Opere dei musei pubblici italiani</b>: anche se l’opera è antica, il Codice dei beni culturali (articoli 107 e 108) chiede l’autorizzazione del museo e il pagamento di un canone per le riproduzioni a scopo di lucro. È il caso del puzzle dell’Uomo Vitruviano: un tribunale italiano ha dato ragione al museo, uno tedesco nel 2025 all’azienda; la questione non è chiusa. Per vendere, meglio scegliere opere di musei con licenza CC0, o chiedere l’autorizzazione.</li></ul>'+
+    '<h3>Dove trovare immagini libere da diritti</h3>'+ColoraView.sources(false)+
+    '<p class="evidence">Informazioni controllate l’8 novembre 2026. Non sono un parere legale: per la vendita, se hai dubbi, chiedi a un esperto di diritto d’autore.</p>')+
   sec('prove','Che cosa dicono gli studi','<p>Ogni gioco ha un’etichetta che dice <b>che tipo di studi</b> esiste oggi su quel genere di gioco. Non misura quanto il gioco funziona.</p><ul><li><span class="chip solido">Studi controllati</span> esiste almeno uno studio controllato con risultati positivi (per esempio cruciverba e sudoku negli anziani, percorsi numerati nei bambini). Non è una prova definitiva: a volte è un solo studio, e non basta a dire che l’effetto sia certo, grande, duraturo o valido per tutti.</li><li><span class="chip promettente">Studi preliminari</span> studi piccoli o osservazionali, con segnali coerenti ma ancora da confermare (mandala, disegno a motivi).</li><li><span class="chip plausibile">Per analogia</span> nessuno studio specifico: il gioco è proposto perché somiglia a giochi studiati.</li></ul><p>Nessun gioco è una cura. Può accompagnare, non sostituire, l’aiuto di medici, terapisti e insegnanti.</p>')+
   sec('demenza','Demenza e difficoltà cognitive','<p>Molti giochi di AttivaMente si possono proporre a persone con demenza lieve o moderata, o con altre difficoltà di memoria e di attenzione. Ecco che cosa sappiamo, con onestà.</p>'+
     '<ul><li><b>Che cosa dicono gli studi.</b> Le prove più solide riguardano la <i>stimolazione cognitiva</i>: attività che fanno pensare, ricordare e parlare, svolte in piccoli gruppi guidati da un operatore, di solito due volte alla settimana per circa dieci settimane. Una revisione Cochrane del 2023 (Woods e colleghi; 37 studi, 2.766 persone con demenza lieve o moderata) ha trovato un beneficio piccolo e di breve durata sulla memoria e sul pensiero, e qualche miglioramento nella comunicazione, nei rapporti con gli altri e nell\u2019umore.</li>'+

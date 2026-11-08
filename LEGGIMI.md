@@ -2,6 +2,32 @@
 
 App web gratuita che accompagna il corso. Funziona su telefono, tablet e computer, si può installare come un'icona e lavora anche senza connessione. Nessun account, nessun dato inviato: tutto resta sul dispositivo.
 
+## Versione 3.21 (8 novembre 2026)
+- Corretto il collegamento alla National Gallery of Art di Washington (nuovo indirizzo della pagina ufficiale) e resa più prudente la frase sui musei nella pagina Arte e benessere. Verifica in `VERIFICA-3.21.md` (nei sorgenti).
+
+## Versione 3.20 (8 novembre 2026)
+- **Immagini libere da colorare**: un elenco di musei e archivi che offrono immagini di opere antiche senza diritti (Metropolitan Museum, Art Institute of Chicago, Cleveland, National Gallery di Washington, Paris Musées, Biodiversity Heritage Library), con consigli su quali immagini vengono meglio. Lo trovi in Crea, nella guida e nella pagina Arte e benessere.
+- In Colorare con i numeri: **«Colora sullo schermo»** apre subito il gioco con il tuo disegno (anche da una tua immagine), e la stampa può essere **senza numeri**, per colorare a scelta libera.
+- Verifica in `VERIFICA-3.20.md` (nei sorgenti).
+
+## Versione 3.19 (8 novembre 2026)
+- Guida e corsi: ultime precisazioni sui diritti delle immagini (uso personale; libretti venduti o regalati). Verifica in `VERIFICA-3.19.md` (nei sorgenti).
+
+## Versione 3.18 (8 novembre 2026)
+- Guida: indicazioni più precise sui diritti delle immagini, per l'uso personale e per i libretti (venduti o anche regalati). Verifica in `VERIFICA-3.18.md` (nei sorgenti).
+
+## Versione 3.17 (8 novembre 2026)
+- **Nuovo gioco: Copia con la griglia.** Figure a punti da ricopiare (al livello Esperto allo specchio), che si giocano anche sullo schermo; e il disegno con la griglia, il metodo classico dei disegnatori, per copiare e ingrandire un disegno o una tua immagine quadretto per quadretto.
+- **Immagini e opere d'arte**: nella guida, che cosa si può fare con le immagini scaricate e con i dipinti antichi, dove trovarne di libere anche per la vendita, e le regole particolari per le opere dei musei pubblici italiani.
+- Verifica documentata in `VERIFICA-3.17.md` (nei sorgenti).
+
+## Versione 3.16 (8 novembre 2026)
+- **Nuovo gioco: Colorare con i numeri.** Disegni sempre nuovi (mandala, vetrate, paesaggi, fiori, geometrie) divisi in zone con il numero del colore, in cinque livelli. Tre modi di colorare: con i numeri, con i colori scelti da te, oppure libero. Si colora sullo schermo o sul foglio stampato, con la legenda che dà il nome di ogni colore.
+- **Dalla tua foto**: nella parte Crea una tua fotografia diventa un disegno da colorare. Tutto avviene nel tuo dispositivo e la foto non viene inviata a nessuno.
+- **Nuova pagina «Arte e benessere»**: che cosa dicono davvero gli studi sul colorare e sull'arteterapia, con i loro limiti; piccole lezioni sui colori (cerchio dei colori e armonie), esercizi, consigli per chi accompagna e sui materiali.
+- In Crea c'è la nuova famiglia «Arte e benessere».
+- Verifica documentata in `VERIFICA-3.16.md` (nei sorgenti).
+
 ## Versione 3.15 (7 novembre 2026)
 - Ultimi ritocchi dopo la verifica di ChatGPT sulla 3.14: le eccezioni del filtro delle parole sono un elenco di parole esatte; nel libro anche una tabella lunghissima si divide sulle pagine dopo.
 - Verifica documentata in `VERIFICA-3.15.md` (nei sorgenti).

@@ -1,7 +1,7 @@
 // Funzionamento senza connessione.
 // La pagina dell'app si chiede sempre prima alla rete (così dopo un aggiornamento si vede subito la versione nuova)
 // e si usa la copia salvata solo senza connessione. Gli altri file (icona, dizionario…) si prendono dalla copia salvata.
-const CACHE = 'attivamente-v46';
+const CACHE = 'attivamente-v47';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 // cache:'reload' scavalca la cache del browser: si salva davvero la versione appena pubblicata
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(u => new Request(u, { cache: 'reload' }))))); self.skipWaiting(); });

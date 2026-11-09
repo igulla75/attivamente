@@ -2,6 +2,14 @@
 
 App web gratuita che accompagna il corso. Funziona su telefono, tablet e computer, si può installare come un'icona e lavora anche senza connessione. Nessun account, nessun dato inviato: tutto resta sul dispositivo.
 
+## Versione 3.29 (9 novembre 2026)
+- **Disegno con la griglia, come nel Rinascimento.** Il modello da copiare ora è l'opera vera, divisa in quadretti, e non più un disegno a contorni ricavato dall'immagine. Si può stampare in bianco e nero, con più contrasto. Accanto c'è la griglia vuota, anche più grande su un foglio a parte, per ingrandire il disegno. I quadretti in larghezza vanno da 3 a 12.
+- **Il disegno d'esempio** è un orso di Leonardo da Vinci, del 1482–85 circa: The Metropolitan Museum of Art, n. 1975.1.369, pubblico dominio.
+- **Consigli su quali immagini scegliere** (disegni e incisioni, un soggetto solo, fondo chiaro), con le parole da cercare nei musei.
+- **Un piccolo corso** nel percorso di Copia con la griglia: il «velo» di Alberti, la quadrettatura, quali immagini scegliere, come si copia passo passo, perché funziona.
+- In Gioca, la copia delle figure a punti ha un pulsante che porta al disegno con la griglia.
+- Verifica in `VERIFICA-3.29.md` (nei sorgenti).
+
 ## Versione 3.28 (9 novembre 2026)
 - **Aggiornamenti visibili subito.** Prima, dopo una pubblicazione, il telefono o il computer potevano continuare a mostrare la versione vecchia, salvata per funzionare senza connessione. Ora l'app chiede sempre prima la pagina alla rete e usa la copia salvata solo senza connessione. Chi aveva una versione precedente vede la nuova dopo averla aperta due o tre volte, oppure subito ricaricando la pagina senza cache (Ctrl+Maiusc+R sul computer).
 - **I disegni creati dall'app non tornano più.** Le bozze e le partite lasciate a metà nelle versioni prima della 3.26, con i paesaggi, i mandala e gli altri disegni creati dall'app, non si riaprono più da sole in Colorare con i numeri e in Copia con la griglia: si parte dall'opera d'esempio o dalla scelta dell'immagine. I lavori salvati apposta in «I miei lavori» restano.

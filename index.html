@@ -335,6 +335,18 @@ input[type=number],select,input[type=text],input:not([type]),textarea{min-height
 .exphelp dl{margin:6px 0}.exphelp dt{font-weight:700;margin-top:6px}.exphelp dd{margin:0 0 2px;color:var(--graphite);font-size:.95em}
 .ecards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}.ecard{background:var(--card);border:1px solid var(--rule);border-radius:var(--radius,14px);padding:16px 18px;scroll-margin-top:12px}.ecard h3{margin:0 0 4px}.ecard p{margin:8px 0}.ecard svg{display:block;margin:10px auto}
 .esol{margin-top:10px;border-top:1px dashed var(--rule);padding-top:8px}.esol summary{cursor:pointer;font-weight:700;color:var(--accent);min-height:44px;display:flex;align-items:center}.elab{margin:10px 0}.elab h4{margin:0 0 6px}.elab label{margin-right:6px}
+.wcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:12px 0}
+.wcards .w{border:2px solid var(--graphite);border-radius:12px;background:var(--card);color:var(--ink);padding:14px 8px;text-align:center;font:inherit;font-size:1.3em;font-weight:700;overflow-wrap:anywhere}
+.wcards button.w{cursor:pointer;min-height:58px}
+.wcards .w.on{background:var(--mark);color:var(--mark-ink);border-color:var(--mark-ink);border-width:4px}
+.wcards .w.ok{border-color:var(--ok);border-width:4px}
+.wcards .w.miss{border-style:dashed;border-color:var(--accent);border-width:3px}
+.wcards .w.bad{border-color:var(--warn);border-width:4px;text-decoration:line-through}
+.wcards button.w[disabled]{opacity:1;cursor:default}
+.wone{font-size:3em;font-weight:800;text-align:center;padding:56px 10px;border:3px solid var(--graphite);border-radius:18px;background:var(--card);margin:12px auto;max-width:560px;overflow-wrap:anywhere}
+.trucco{border-left:6px solid var(--accent);background:var(--soft);padding:10px 14px;border-radius:8px}
+@media (max-width:600px){.wcards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.wcards .w{font-size:1.1em;padding:12px 4px;overflow-wrap:normal;hyphens:auto}.wone{font-size:2.2em;padding:40px 8px}}
+@media print{.wcards{grid-template-columns:repeat(4,1fr)}.wcards .w{font-size:15pt;padding:10px 4px}}
 .kimlook svg{max-height:62vh;width:auto;max-width:100%;display:block;margin:0 auto}
 .bench.game:fullscreen,.bench.game:-webkit-full-screen{background:var(--paper);overflow:auto;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,34%);gap:12px;align-items:start}
 @media screen{.bench.game .sheet>.titles{display:none}
@@ -1941,6 +1953,7 @@ var ICO = {
   logica:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6h40v40H6zM6 19h40M6 32h40M19 6v40M32 6v40"/><path d="M9 9l7 7M16 9l-7 7M36 23a3 3 0 1 0 0.1 0"/></svg>',
   profilo:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><circle cx="14" cy="16" r="6"/><circle cx="38" cy="16" r="6"/><path d="M4 36c2-6 6-9 10-9s8 3 10 9M28 36c2-6 6-9 10-9s8 3 10 9"/><path d="M20 44h12M26 38v12" stroke-dasharray="3 3"/></svg>',
   kim:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="5" y="5" width="18" height="18" rx="3"/><rect x="29" y="5" width="18" height="18" rx="3" stroke-dasharray="3 3"/><rect x="5" y="29" width="18" height="18" rx="3"/><text x="38" y="44" font-size="18" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">?</text></svg>',
+  lista:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="8" y="5" width="30" height="42" rx="4"/><path d="M15 15h16M15 24h16M15 33h10"/><path d="M32 38l5 5 10-11"/></svg>',
   sequenze:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="5" y="5" width="19" height="19" rx="5" fill="currentColor" opacity=".9"/><rect x="28" y="5" width="19" height="19" rx="5"/><rect x="5" y="28" width="19" height="19" rx="5"/><rect x="28" y="28" width="19" height="19" rx="5" fill="currentColor" opacity=".4"/></svg>',
   corsi:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="26" width="10" height="10" rx="2"/><rect x="16" y="6" width="10" height="10" rx="2" fill="currentColor"/><rect x="28" y="22" width="10" height="10" rx="2"/><rect x="38" y="38" width="10" height="10" rx="2"/><rect x="36" y="6" width="10" height="10" rx="2"/><path d="M21 16l10 7" stroke-dasharray="3 3"/></svg>',
   incastro:'<svg class="ico" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6h40v40H6zM6 19h40M6 32h40M19 6v40M32 6v40"/><path d="M19 19h13v13H19z" fill="currentColor"/><text x="12.5" y="16" font-size="9" text-anchor="middle" fill="currentColor" stroke="none">A</text><text x="25.5" y="16" font-size="9" text-anchor="middle" fill="currentColor" stroke="none">R</text><text x="38.5" y="16" font-size="9" text-anchor="middle" fill="currentColor" stroke="none">E</text></svg>',
@@ -1982,6 +1995,7 @@ var FAMILIES = [
   { name:'Memoria e attenzione', hint:'giochi brevi, da fare anche ogni giorno', tools:[
     { id:'memory', name:'Memory', ev:'plausibile', text:'Carte con parole, disegni o le tue foto, da stampare e ritagliare.' },
     { id:'kim', name:'Che cosa manca?', ev:'plausibile', text:'Il gioco di Kim: un foglio da guardare, uno con gli oggetti spariti. Disegni o parole tue.' },
+    { id:'lista', name:'La lista da ricordare', ev:'plausibile', text:'Parole da leggere e da ritrovare in mezzo ad altre, con il trucco per ricordarle. Parole tue o proposte dall’app.' },
     { id:'sequenze', name:'Sequenze', ev:'plausibile', text:'Carte colorate con forme diverse e sequenze pronte, dalle più corte alle più lunghe.' },
     { id:'corsi', name:'Blocchi di Corsi', ev:'plausibile', text:'La tavola dei nove blocchi e le sequenze per chi conduce, anche all’indietro.' } ]},
   { name:'Parole', hint:'per chi ama leggere e scrivere', tools:[
@@ -2069,7 +2083,7 @@ function renderHome(){
     });
     html += '</div></section>';
   });
-  html += '</div><p class="note">Le etichette (studi controllati, studi preliminari, per analogia) dicono che tipo di studi esiste oggi su ciascun tipo di gioco. Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.26.</p>';
+  html += '</div><p class="note">Le etichette (studi controllati, studi preliminari, per analogia) dicono che tipo di studi esiste oggi su ciascun tipo di gioco. Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.27.</p>';
   app.innerHTML = html;
 }
 
@@ -7809,6 +7823,158 @@ makeCrea(TOOLS.sequenze, false); makeCrea(TOOLS.corsi, true);
 // i giochi di memoria condividono play: TOOLS.corsi aveva play di sequenze, resta così
 })();
 
+/* ===================== LA LISTA DA RICORDARE: memoria delle parole =====================
+   Si leggono alcune parole (tutte insieme oppure una alla volta), poi si ritrovano in mezzo ad altre.
+   Le parole vengono da gruppi (frutta, animali, attrezzi…): così si può usare il trucco di raggrupparle,
+   e ai livelli alti le parole per confondere sono dello stesso gruppo, quindi più difficili da scartare. */
+(function(){
+var BANK={
+  'frutta':['mela','pera','banana','arancia','limone','fragola','ciliegia','uva','ananas','melone','anguria','albicocca','kiwi','mandarino','prugna'],
+  'verdura':['carota','patata','cipolla','pomodoro','zucchina','insalata','sedano','peperone','melanzana','cavolo','finocchio','zucca','carciofo','aglio','porro'],
+  'animali':['cane','gatto','cavallo','mucca','pecora','coniglio','leone','elefante','giraffa','tigre','orso','volpe','scoiattolo','delfino','tartaruga'],
+  'mobili':['tavolo','sedia','letto','divano','armadio','lampada','specchio','tappeto','poltrona','cassetto','scaffale','tenda','cuscino','comodino','quadro'],
+  'cucina':['pentola','padella','forchetta','cucchiaio','coltello','piatto','bicchiere','tazza','teiera','mestolo','scolapasta','tagliere','caraffa','grattugia','frullatore'],
+  'vestiti':['camicia','maglione','giacca','cappotto','sciarpa','cappello','guanto','gonna','cravatta','calza','scarpa','stivale','cintura','vestaglia','pigiama'],
+  'attrezzi':['martello','chiodo','cacciavite','pinza','sega','trapano','metro','scala','pennello','secchio','badile','rastrello','tenaglia','livella','carriola'],
+  'trasporti':['automobile','autobus','treno','bicicletta','aereo','nave','barca','moto','camion','tram','taxi','elicottero','monopattino','traghetto','metropolitana'],
+  'natura':['fiume','montagna','lago','mare','bosco','prato','collina','cascata','spiaggia','isola','nuvola','stella','sole','luna','vulcano'],
+  'musica':['chitarra','pianoforte','violino','tamburo','flauto','tromba','arpa','fisarmonica','violoncello','clarinetto','sassofono','mandolino','organo','xilofono','oboe'],
+  'scuola':['matita','penna','quaderno','gomma','righello','libro','zaino','colla','temperino','lavagna','gesso','agenda','busta','francobollo','calendario'],
+  'cibi':['pane','pasta','formaggio','latte','burro','uovo','miele','marmellata','biscotto','torta','minestra','pizza','prosciutto','yogurt','cioccolato'],
+  'fiori':['rosa','margherita','tulipano','girasole','giglio','orchidea','geranio','papavero','lavanda','ciclamino','garofano','mimosa','glicine','ortensia','gelsomino']
+};
+var CATS=Object.keys(BANK), CAT_OF={};
+CATS.forEach(function(c){ BANK[c].forEach(function(w){ CAT_OF[w]=c; }); });
+function shuffle(a, rnd){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(rnd()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function norm(w){ return String(w||'').trim().toLowerCase(); }
+function alive(ctx){ return ctx.work && document.body.contains(ctx.work); }
+function bigBtn(id, label, primary, dis){ return '<div class="row" style="justify-content:center;margin:12px 0"><button class="btn'+(primary?' primary':'')+'" id="'+id+'" style="font-size:1.15em;padding:12px 22px"'+(dis?' disabled':'')+'>'+label+'</button></div>'; }
+
+/* scelta delle parole: n parole da nc gruppi, mescolate; nd parole per confondere, una parte (sim) dagli stessi gruppi */
+function pickWords(n, nc, rnd){ var cats=shuffle(CATS.slice(), rnd).slice(0, Math.max(1, Math.min(nc, CATS.length))), pools={}, out=[];
+  cats.forEach(function(c){ pools[c]=shuffle(BANK[c].slice(), rnd); });
+  for(var i=0; out.length<n && i<n*20; i++){ var c=cats[i%cats.length], w=pools[c].shift(); if(w) out.push(w); }
+  return shuffle(out, rnd); }
+function pickDis(words, nd, sim, rnd){ var used={}, same=[], other=[]; words.forEach(function(w){ used[norm(w)]=1; });
+  var cats={}; words.forEach(function(w){ var c=CAT_OF[norm(w)]; if(c) cats[c]=1; });
+  var sc=Object.keys(cats), oc=CATS.filter(function(c){ return !cats[c]; });
+  // stesso gruppo: si gira tra i gruppi della lista, così ogni gruppo ha le sue parole "trappola"
+  var sp={}; sc.forEach(function(c){ sp[c]=shuffle(BANK[c].filter(function(w){ return !used[w]; }), rnd); });
+  for(var i=0; same.length<nd && sc.length && i<nd*20; i++){ var c=sc[i%sc.length], w=sp[c].shift(); if(w) same.push(w); }
+  oc.forEach(function(c){ BANK[c].forEach(function(w){ if(!used[w]) other.push(w); }); }); shuffle(other, rnd);
+  if(!other.length) CATS.forEach(function(c){ BANK[c].forEach(function(w){ if(!used[w] && same.indexOf(w)<0) other.push(w); }); });
+  var k=Math.round(nd*sim), out=same.slice(0,k); for(var j=0; out.length<nd && j<other.length; j++) if(out.indexOf(other[j])<0) out.push(other[j]);
+  for(var q=k; out.length<nd && q<same.length; q++) out.push(same[q]);
+  return shuffle(out, rnd); }
+
+var TRICK={
+  gruppi:'<b>Il trucco:</b> raggruppa le parole per tipo, per esempio «tre frutti e due animali», e ripeti i gruppi nella testa. Chi ricorda il gruppo ritrova anche le parole.',
+  storia:'<b>Il trucco:</b> inventa una piccola scena che leghi ogni parola alla successiva, come in un film: «il <i>cane</i> porta in bocca una <i>chitarra</i> fino al <i>lago</i>…». Più è buffa, meglio si ricorda.' };
+function cards(list, cls){ return '<div class="wcards">'+list.map(function(w){ return '<div class="w'+(cls?' '+cls(w):'')+'">'+esc(w)+'</div>'; }).join('')+'</div>'; }
+
+TOOLS.lista = {
+  id:'lista', title:'La lista da ricordare', defTitle:'La lista da ricordare', ev:'plausibile',
+  BANK:BANK, CAT_OF:CAT_OF, pickWords:pickWords, pickDis:pickDis,
+  play:{ intro:'Leggi le parole e cerca di ricordarle: poi dovrai ritrovarle in mezzo ad altre.',
+    steps:['Premi Inizia e leggi le parole: tutte insieme oppure una alla volta, secondo il livello.','Nei livelli più alti c’è una piccola pausa prima di rispondere.','Tocca le parole che erano nella lista, poi premi Conferma.','Prova il trucco che trovi sopra il pulsante Inizia: aiuta davvero.'],
+    prepare:function(d){ var rnd=makeRng(d.seed*113+(d.L||0)*7+3);
+      if(!d.custom){ d.words=pickWords(d.n, d.cats, rnd); d.dis=pickDis(d.words, d.n, d.sim, rnd); }
+      d.n=d.words.length; d.options=shuffle(d.words.concat(d.dis), makeRng(d.seed*7+1)); d.phase='ready'; d.picks=[]; d.i=0; d.res=null; },
+    side:function(){ return '<div class="panel"><div id="ls-stat" class="explain"></div></div>'; },
+    howLook:function(d){ return d.one ? 'Le '+d.n+' parole compariranno una alla volta'+(state.settings.notime?'; passi alla successiva quando vuoi.':', ognuna per '+(d.ms/1000).toLocaleString('it-IT')+' secondi.')
+      : (state.settings.notime?'Vedrai '+d.n+' parole tutte insieme, senza tempo: quando sei pronta/o premi «Sono pronta/o».':'Vedrai '+d.n+' parole tutte insieme, per '+d.sec+' secondi.'); },
+    render:function(ctx){ var d=ctx.d, me=TOOLS.lista.play, h='', st=$('ls-stat'), wset={};
+      d.words.forEach(function(w){ wset[w]=1; });
+      if(d.phase==='ready') h='<p class="note">'+me.howLook(d)+(d.pause?' Poi una breve pausa,':' Poi')+' e dovrai ritrovarle in mezzo ad altre '+d.dis.length+' parole'+(d.sim>=1?' dello stesso tipo':'')+'.</p><p class="trucco">'+TRICK[d.trick||'gruppi']+'</p>'+bigBtn('ls-go','Inizia',true);
+      else if(d.phase==='look' && d.one) h='<p class="note" aria-live="polite">Parola '+(d.i+1)+' di '+d.n+'</p><div class="wone">'+esc(d.words[d.i])+'</div>'+(state.settings.notime?bigBtn('ls-next', d.i+1<d.n?'Avanti':'Ho finito', true):'');
+      else if(d.phase==='look') h='<p class="note" id="ls-t">'+(state.settings.notime?'Leggi con calma. Quando sei pronta/o, premi il pulsante qui sotto.':'Leggi e ricorda… '+(d.left||d.sec))+'</p>'+bigBtn('ls-ready','Sono pronta/o')+cards(d.words);
+      else if(d.phase==='pause') h='<p class="note">Le parole si sono nascoste.</p><p class="trucco"><b>Una piccola pausa:</b> prima di rispondere, conta all’indietro da 20 a 1, a voce alta o nella testa. Serve a mettere le parole un po’ più lontano, come succede nella vita di tutti i giorni.</p>'+bigBtn('ls-pok','Fatto: rispondo',true);
+      else { var done=d.phase==='done';
+        h='<p class="note" aria-live="polite">'+(done ? me.verdict(d) : 'Quali parole erano nella lista? Toccale (al massimo '+d.n+'), poi premi Conferma.')+'</p><div class="wcards">'+
+          d.options.map(function(w){ var on=d.picks.indexOf(w)>=0, c=''; if(done){ c = wset[w] ? (on?' ok':' miss') : (on?' bad':''); } else if(on) c=' on';
+            return '<button class="w'+c+'" data-w="'+esc(w)+'" aria-pressed="'+on+'"'+(done?' disabled':'')+'>'+esc(w)+(done&&wset[w]?(on?' ✓':' ⋯'):done&&on?' ✗':'')+'</button>'; }).join('')+'</div>';
+        if(done) h+='<p class="evidence">✓ ritrovata · ⋯ era nella lista ma non l’hai scelta · ✗ non era nella lista.</p><p class="trucco">'+TRICK[d.trick||'gruppi']+'</p>';
+        else h+=bigBtn('ls-ok','Conferma ('+d.picks.length+' su '+d.n+')', true, !d.picks.length); }
+      ctx.work.innerHTML=h;
+      if(st) st.textContent = d.phase==='done' ? (d.res.ok?'Risolto!':'Ritrovate '+d.res.hits+' su '+d.n+'.') : d.n+' parole da ricordare, '+d.dis.length+' per confondere.'; },
+    verdict:function(d){ var r=d.res; return (r.hits===d.n?'Perfetto! Le hai ritrovate tutte e '+d.n+'.':'Hai ritrovato '+r.hits+' parole su '+d.n+'.'+(r.ok?' Ottimo!':''))+(r.wrong?' '+(r.wrong===1?'Una parola che hai scelto non era':r.wrong+' parole che hai scelto non erano')+' nella lista.':''); },
+    bind:function(ctx){ var d=ctx.d, me=TOOLS.lista.play, timer=null; if(d.phase==='look') d.phase='ready';
+      var after=function(){ clearInterval(timer); clearTimeout(timer); ctx.quiet(function(){ d.phase=d.pause?'pause':'answer'; }); };
+      var nextWord=function(){ if(d.i+1<d.n) ctx.quiet(function(){ d.i++; }); else after(); };
+      var tick=function(){ timer=setTimeout(function(){ if(!alive(ctx) || d.phase!=='look') return; if(d.i+1<d.n){ ctx.quiet(function(){ d.i++; }); tick(); } else after(); }, d.ms); };
+      ctx.work.addEventListener('click', function(e){ var t=e.target.closest('button'); if(!t || t.disabled) return;
+        if(t.id==='ls-go'){ ctx.quiet(function(){ d.phase='look'; d.i=0; d.left=d.sec; }); try{ ctx.work.scrollIntoView({ block:'start' }); }catch(err){} if(state.settings.notime) return;
+          if(d.one) tick(); else timer=setInterval(function(){ if(!alive(ctx)){ clearInterval(timer); return; } d.left--; var el=$('ls-t'); if(el) el.textContent='Leggi e ricorda… '+d.left; if(d.left<=0) after(); }, 1000); }
+        else if(t.id==='ls-ready') after();
+        else if(t.id==='ls-next') nextWord();
+        else if(t.id==='ls-pok') ctx.quiet(function(){ d.phase='answer'; });
+        else if(t.dataset.w!=null && d.phase==='answer'){ var w=t.dataset.w, i=d.picks.indexOf(w);
+          if(i<0 && d.picks.length>=d.n){ toast('Hai già scelto '+d.n+' parole: togline una per cambiarla'); return; }
+          ctx.quiet(function(){ if(i>=0) d.picks.splice(i,1); else d.picks.push(w); }); }
+        else if(t.id==='ls-ok' && d.picks.length) ctx.change(function(){ var wset={}; d.words.forEach(function(w){ wset[w]=1; });
+          var hits=d.picks.filter(function(w){ return wset[w]; }).length, wrong=d.picks.length-hits; d.res={ hits:hits, wrong:wrong, ok:(d.n-hits)<=(d.allow||0) }; d.phase='done'; }); }); },
+    // stampa: pagina 1 le parole da leggere; pagina 2 (da girare dopo) le parole da cerchiare
+    print:function(ctx){ var d=ctx.d; ctx.work.innerHTML='<p class="keyline">'+(d.one?'Chi conduce legge ad alta voce queste '+d.n+' parole, una ogni 2 secondi; poi gira il foglio.':'Leggi queste '+d.n+' parole per '+d.sec+' secondi, poi gira il foglio.')+'</p>'+cards(d.words)+'<p class="trucco">'+TRICK[d.trick||'gruppi']+'</p>'; },
+    printExtra:function(ctx){ var d=ctx.d; return '<div class="titles"><h2>Quali parole erano nella lista?</h2><p>'+(d.pause?'Prima conta all’indietro da 20 a 1. Poi cerchia le ':'Cerchia le ')+d.n+' parole che hai letto.</p></div>'+cards(d.options)+
+      '<p class="evidence">Soluzione (capovolta): <span style="display:inline-block;transform:rotate(180deg)">'+d.words.map(esc).join(', ')+'</span></p>'; },
+    check:function(ctx){ var d=ctx.d; return d.phase!=='done' ? infoMsg('Partita in corso.','') : d.res.ok ? okMsg('Esatto!', TOOLS.lista.play.verdict(d)) : warnMsg('Ci sono parole da ritrovare.', 'Le parole erano: '+d.words.join(', ')+'.'); },
+    // un lavoro di Crea mandato come link: si gioca con le parole scelte da chi l'ha creato
+    pack:function(x){ var w=(x.words||[]).map(norm).filter(Boolean), dis=(x.dis||[]).map(norm).filter(function(v){ return v && w.indexOf(v)<0; });
+      Object.keys(x).forEach(function(k){ if(['title','dedica'].indexOf(k)<0) delete x[k]; });
+      x.custom=true; x.words=w; x.dis=dis; x.n=w.length; x.seed=Math.floor(Math.random()*1e6); x.one=false; x.sec=Math.round(10+w.length*2); x.ms=2000; x.pause=true; x.sim=0.5; x.allow=w.length>=10?1:0; x.trick='gruppi'; },
+    solution:false }
+};
+
+/* ---------- Crea: la lista da preparare per giocare al tavolo ---------- */
+var T=TOOLS.lista;
+T.intro='La lista da ricordare, da preparare per giocare al tavolo o da mandare come link: un foglio con le parole da leggere e un foglio dove ritrovarle in mezzo ad altre. Le parole puoi sceglierle tu: i nomi dei nipoti, la spesa della settimana, le parole di un argomento di scuola.';
+T.steps=['Scegli quante parole e premi Altre parole finché la lista ti piace.','Cambia le parole che vuoi: puoi scriverne di tue.','Le parole per confondere le prepara l’app; se le vuoi dello stesso tipo, il gioco diventa più difficile.','Stampa: il foglio da leggere, il foglio da cerchiare e la pagina per chi conduce.'];
+T.cats=function(n){ return n<=5?2:n<=10?3:n<=12?4:5; };
+T.init=function(){ var d={ n:10, sim:false, one:false, seed:1, words:[], dis:[] }; T.fill(d); return d; };
+T.fill=function(d){ var rnd=makeRng(d.seed*61+d.n); d.words=pickWords(d.n, T.cats(d.n), rnd); T.refillDis(d); };
+T.refillDis=function(d){ d.dis=pickDis(d.words.map(norm).filter(Boolean), d.words.length, d.sim?1:0, makeRng(d.seed*89+d.words.length*3+(d.sim?1:0))); };
+T.options=function(d){ return shuffle(d.words.concat(d.dis).filter(function(w){ return norm(w); }), makeRng(d.seed*7+1)); };
+T.secs=function(d){ return Math.round(10+d.words.length*2); };
+T.side=function(ctx){ var d=ctx.d; return '<div class="panel"><h3>Quante parole</h3>'+seg('s-ln',[[5,'5'],[7,'7'],[10,'10'],[12,'12'],[15,'15'],[20,'20']],d.n)+
+  '<label class="check"><input type="checkbox" id="c-lsim"'+(d.sim?' checked':'')+'> Parole per confondere dello stesso tipo (più difficile)</label><label class="check"><input type="checkbox" id="c-lone"'+(d.one?' checked':'')+'> Le parole si leggono una alla volta (più difficile)</label>'+
+  '<div class="row"><button class="btn primary" id="b-lfill">Altre parole</button><button class="btn" id="b-ldis">Altre per confondere</button></div></div>'+
+  '<div class="panel"><h3>Le parole da ricordare</h3><div id="ls-w"></div><h3>Le parole per confondere</h3><div id="ls-d"></div></div>'; };
+T.list=function(d){ ['words','dis'].forEach(function(k){ var el=$(k==='words'?'ls-w':'ls-d'); if(!el) return;
+  el.innerHTML=d[k].map(function(w,i){ return '<div class="row" style="gap:6px;margin:3px 0"><b style="width:1.6em">'+(i+1)+'</b><input data-lk="'+k+'" data-li="'+i+'" value="'+esc(w)+'" maxlength="24" aria-label="'+(k==='words'?'Parola da ricordare ':'Parola per confondere ')+(i+1)+'"></div>'; }).join(''); }); };
+T.bind=function(ctx){ var d=ctx.d, list=function(){ T.list(d); };
+  onSeg('s-ln', function(v){ ctx.change(function(){ d.n=+v; T.fill(d); }); list(); });
+  $('c-lsim').onchange=function(e){ ctx.change(function(){ d.sim=e.target.checked; T.refillDis(d); }); list(); };
+  $('c-lone').onchange=function(e){ ctx.change(function(){ d.one=e.target.checked; }); };
+  $('b-lfill').onclick=function(){ ctx.change(function(){ d.seed++; T.fill(d); }); list(); };
+  $('b-ldis').onclick=function(){ ctx.change(function(){ d.seed++; T.refillDis(d); }); list(); };
+  ['ls-w','ls-d'].forEach(function(id){ $(id).addEventListener('input', function(e){ var t=e.target; if(!t.dataset.lk) return; d[t.dataset.lk][+t.dataset.li]=t.value; ctx.persist(); ctx.render(); }); });
+  list(); };
+T.render=function(ctx){ var d=ctx.d, p=ctx.ui.printing, w=d.words.filter(function(x){ return norm(x); });
+  ctx.work.innerHTML=(p?'<p class="keyline">'+(d.one?'Chi conduce legge ad alta voce queste parole, una ogni 2 secondi. Poi si gira il foglio.':'Leggi queste parole per circa '+T.secs(d)+' secondi. Poi gira il foglio.')+'</p>':'<h3>Primo foglio: le parole da ricordare</h3>')+cards(w)+
+    (p?'':'<h3>Secondo foglio: ritrova le parole</h3>'+cards(T.options(d))); };
+T.problems=function(d){ var out=[], seen={}, dup=[], cross=[], ws={};
+  var empty=d.words.filter(function(w){ return !norm(w); }).length; if(empty) out.push(['warn', empty===1?'Una parola da ricordare è vuota.':empty+' parole da ricordare sono vuote.','Scrivila o premi Altre parole.']);
+  d.words.forEach(function(w){ var k=norm(w); if(!k) return; if(seen[k]) dup.push(w); seen[k]=1; ws[k]=1; });
+  if(dup.length) out.push(['warn','Alcune parole si ripetono.', dup.join(', ')+': nella lista ogni parola deve comparire una volta sola.']);
+  var ds={}; d.dis.forEach(function(w){ var k=norm(w); if(!k) return; if(ws[k]) cross.push(w); else if(ds[k]) dup.push(w); ds[k]=1; });
+  if(cross.length) out.push(['warn','Alcune parole sono sia da ricordare sia per confondere.', cross.join(', ')+': chi gioca non saprebbe se sceglierle. Cambiale tra quelle per confondere.']);
+  var nd=Object.keys(ds).filter(function(k){ return !ws[k]; }).length, nw=Object.keys(ws).length;
+  if(nw && nd<nw) out.push(['warn','Servono più parole per confondere.','Ce ne sono '+nd+' per '+nw+' parole da ricordare: con meno parole per confondere basta scartare. Premi Altre per confondere.']);
+  var long=d.words.concat(d.dis).filter(function(w){ return norm(w).length>16; }); if(long.length) out.push(['info','Alcune parole sono molto lunghe.', long.join(', ')+': sul foglio verranno scritte più piccole.']);
+  return out; };
+T.check=function(ctx){ var d=ctx.d, pr=T.problems(d), w=pr.filter(function(p){ return p[0]==='warn'; })[0];
+  if(w) return warnMsg(w[1], w[2]);
+  return okMsg(d.words.length+' parole da ricordare, '+d.dis.length+' per confondere.', (d.one?'Leggile ad alta voce una ogni 2 secondi.':'Tempo consigliato per leggerle: '+T.secs(d)+' secondi.')+(pr.length?' '+pr[0][1]:'')); };
+T.solution=function(ctx){ var d=ctx.d, ws={}; d.words.forEach(function(w){ ws[norm(w)]=1; }); return '<p>Le parole della lista sono quelle segnate.</p>'+cards(T.options(d), function(w){ return ws[norm(w)]?'ok':''; }); };
+T.extraPage=function(ctx){ var d=ctx.d; return '<div class="titles"><h2>Quali parole erano nella lista?</h2><p>Cerchia le '+d.words.length+' parole che hai letto.</p></div>'+cards(T.options(d))+
+  '<div class="sheettext pagebreak"><h2>Per chi conduce</h2><ol>'+
+  (d.one?'<li>Leggi ad alta voce le parole del primo foglio, con calma, una ogni 2 secondi.</li>':'<li>Dai il primo foglio per circa '+T.secs(d)+' secondi (anche il doppio, se serve), poi ritiralo.</li>')+
+  '<li>Prima di rispondere, una piccola pausa: contare all’indietro da 20 a 1, oppure parlare d’altro per un minuto.</li><li>Se vuoi, chiedi prima di dire a memoria tutte le parole che ricorda, senza aiuti, e prendine nota.</li><li>Poi dai il secondo foglio: chi gioca cerchia le parole che erano nella lista. Non c’è fretta.</li><li>Alla fine, guardate insieme quali parole sono state ricordate e prova il trucco della prossima volta.</li></ol>'+
+  '<p class="trucco">'+TRICK.gruppi+'</p><p class="trucco">'+TRICK.storia+'</p>'+
+  '<p class="evidence">È un gioco, non un test di memoria. Imparare un trucco per ricordare migliora i risultati nei compiti di memoria (lo mostrano decine di studi con persone anziane); che aiuti anche nella vita di tutti i giorni è molto meno dimostrato.</p>'+
+  '<h3>Soluzione</h3><p>'+d.words.map(esc).join(', ')+'</p></div>'; };
+})();
+
 /* ===================== TROVA LE DIFFERENZE (con la raccolta di disegni) ===================== */
 (function(){
 var P=500, OX=[20,560], BG={ prato:'<rect width="500" height="500" fill="#cfe9ff"/><rect y="330" width="500" height="170" fill="#a7d98b"/>', mare:'<rect width="500" height="500" fill="#cfe9ff"/><rect y="300" width="500" height="200" fill="#5aa9e6"/><path d="M0 300q25-12 50 0t50 0 50 0 50 0 50 0 50 0 50 0 50 0 50 0 50 0" fill="#5aa9e6"/>', notte:'<rect width="500" height="500" fill="#24305e"/><rect y="360" width="500" height="140" fill="#3a5a40"/>', bianco:'<rect width="500" height="500" fill="#ffffff"/>' };
@@ -8425,6 +8591,7 @@ var RULES = {
 };
 RULES.profilo={ scopo:'Scegliere in gruppo la migliore tra tre opzioni.', regole:['Ognuno riceve una scheda con informazioni sulle tre opzioni. Tutte le informazioni sono vere.','Prima, da soli, si legge la scheda e si scrive la propria scelta.','Poi il gruppo discute e deve arrivare a una sola scelta comune.','La scheda non si mostra agli altri; si può leggerla ad alta voce (a meno che chi conduce l\u2019abbia ritirata).','Alla fine chi conduce rivela la soluzione e si parla di come è andata.'], passi:[], crea:['Scegli scenario, numero di partecipanti e livello; premi Controlla per vedere la verifica; stampa le schede e il copione.'] };
 RULES.kim={ scopo:'Scoprire quali oggetti sono spariti.', regole:['Guarda gli oggetti per il tempo indicato (puoi fermarti prima con Sono pronta/o).','Gli oggetti si nascondono e ricompaiono, ma alcuni mancano.','Nell\u2019elenco in basso tocca quelli che mancano, poi Conferma.','Nei livelli alti gli oggetti rimasti cambiano anche posto.'], passi:[], crea:['Si gioca solo sullo schermo: ogni partita è nuova. Per giocarlo al tavolo basta un vassoio con oggetti di casa e un panno per coprirli.'] };
+RULES.lista={ scopo:'Ritrovare le parole della lista in mezzo ad altre.', regole:['Premi Inizia e leggi le parole: tutte insieme per qualche secondo oppure, nei livelli alti, una alla volta.','Dal livello Facile c\u2019è una piccola pausa: si conta all\u2019indietro da 20 a 1.','Poi compaiono le parole della lista mescolate ad altre: tocca quelle che avevi letto e premi Conferma.','Nei livelli alti le parole per confondere sono dello stesso tipo: se nella lista c\u2019era «mela», tra le altre trovi «pera».','Prova il trucco che l\u2019app ti suggerisce: raggruppare le parole per tipo, oppure inventare una piccola storia che le colleghi.'], passi:[], crea:['In Crea scegli quante parole e scrivi le tue (per esempio i nomi dei nipoti o la lista della spesa); le parole per confondere le prepara l\u2019app. Stampa il foglio da leggere, quello da cerchiare e la pagina per chi conduce, oppure manda il gioco come link.'] };
 RULES.sequenze={ scopo:'Ripetere sequenze sempre più lunghe.', regole:['Premi Inizia: i pulsanti si accendono uno alla volta.','Quando tocca a te, toccali nello stesso ordine.','Se riesci, la sequenza si allunga di uno; vinci quando arrivi all\u2019obiettivo del livello.','Hai 3 tentativi: a ogni errore ricevi una sequenza nuova della stessa lunghezza.','Ogni colore ha anche una forma diversa, utile per chi distingue male i colori.'], passi:[], crea:['Si gioca solo sullo schermo.'] };
 RULES.corsi={ scopo:'Ricordare un percorso nello spazio.', regole:['Nove blocchi sono sparsi sul foglio. Alcuni si accendono, uno alla volta.','Quando tocca a te, tocca gli stessi blocchi nello stesso ordine.','Nel livello Esperto vanno toccati all\u2019indietro, dall\u2019ultimo al primo.','Se riesci, il percorso si allunga di uno; hai 3 tentativi.'], passi:[], crea:['Si gioca solo sullo schermo. Il compito è ispirato ai blocchi di Corsi (1972), usati in psicologia per misurare la memoria visuo-spaziale: qui è un gioco, non un test.'] };
 RULES.labgioca={ scopo:'Arrivare dall\u2019entrata all\u2019uscita.', regole:['L\u2019entrata è in alto a sinistra, l\u2019uscita in basso a destra (le frecce verdi).','Non si attraversano i muri.','Esiste una sola strada giusta: le altre finiscono in vicoli ciechi.','Nei livelli alti i corridoi sono lunghi e tortuosi: un vicolo cieco si scopre tardi.'], passi:[], crea:['In Crea \u2192 Labirinti disegni tu il labirinto aprendo i passaggi; l\u2019app controlla che ci sia una strada e conta i vicoli ciechi.'] };
@@ -8747,6 +8914,9 @@ var GEN = {
   corsi:{ name:'Blocchi di Corsi', desc:'Memoria dello spazio: ripeti il percorso tra i blocchi.', lv:['fino a 3 blocchi','fino a 4','fino a 5','fino a 6','6 all’indietro'],
     make:function(L, seed){ return { mode:'corsi', seed:seed, pads:9, start:[2,3,3,4,3][L], target:[3,4,5,6,6][L], speed:1000, back:L===4 }; },
     solved:function(d){ return d.phase==='won'; } },
+  lista:{ name:'La lista da ricordare', desc:'Leggi le parole, poi ritrovale in mezzo ad altre.', lv:['5 parole','7 parole, con una pausa','10 parole, con una pausa','12 parole, una alla volta','15 parole, una alla volta, altre simili'],
+    make:function(L, seed){ return { L:L, seed:seed, n:[5,7,10,12,15][L], cats:[2,3,3,4,5][L], sim:[0,0.4,0.6,0.8,1][L], one:L>=3, sec:[20,25,35,0,0][L], ms:[0,0,0,2500,2000][L], pause:L>=1, allow:[0,0,1,1,2][L], trick:L>=3?'storia':'gruppi' }; },
+    solved:function(d){ return d.phase==='done' && d.res && d.res.ok; } },
   labgioca:{ name:'Labirinto', desc:'Corridoi, muri e vicoli ciechi: un foglio e una matita.', lv:['8×8','12×12','18×18','25×25, corridoi lunghi','35×35, corridoi lunghi'],
     make:function(L, seed){ return { n:[8,12,18,25,35][L], seed:seed, style:L>=3?'lunghi':'rami' }; },
     solved:function(d){ var e=d.path&&d.path[d.path.length-1]; return !!e && e[0]===d.n-1 && e[1]===d.n-1; } },
@@ -8830,8 +9000,8 @@ function renderGiocaHub(){
   var html='<section class="toolhead"><h1>Gioca</h1><p>Partite create all’istante e verificate: nei rompicapi la soluzione è sempre una sola, nel Mahjong la partita si può sempre risolvere. '+(state.settings.simple?'Con il profilo che hai scelto vedi i livelli Principiante e Facile.':'Cinque livelli, dal Principiante all’Esperto.')+' Niente pubblicità, niente dati inviati.</p></section>'+
     '<section class="daily"><h2>I giochi del giorno</h2><p class="evidence">Ogni giorno una partita nuova per ogni gioco, di livello '+(state.settings.simple?'Principiante':'Medio')+'.'+(S._streak?' Giorni di fila con almeno un gioco del giorno: <b>'+S._streak+'</b>.':'')+'</p><div class="dailyrow">'+
     Object.keys(GEN).filter(function(g){ return !GEN[g].pick; }).map(function(g){ return '<a class="btn'+(dailyDone[g]?' on':'')+'" href="#p-'+g+'-'+(state.settings.simple?0:2)+'-d">'+(dailyDone[g]?'✓ ':'')+GEN[g].name+'</a>'; }).join('')+'</div></section><div class="gcards">';
-  var GROUPS=[['Numeri',['sudoku','hexadoku','futoshiki','suguru','numbrix','kakuro','ponti']],['Parole',['incastro','crucipuzzle','cifrato']],['Logica e spazio',['scacchi','matto','logica','labgioca','tangioca','penta','crucipixel','mahjong']],['Memoria e attenzione',['memory','kim','sequenze','corsi']],['Arte e colori',['colora','copia']]], placed={};
-  if(state.settings.simple) GROUPS=[['Per cominciare',['colora','memory','kim','sequenze','sudoku','labgioca','crucipuzzle']],['Altri giochi',['corsi','copia','tangioca','logica','incastro','futoshiki','suguru','numbrix','crucipixel','ponti','kakuro','cifrato','mahjong','penta','scacchi','matto','hexadoku']]];
+  var GROUPS=[['Numeri',['sudoku','hexadoku','futoshiki','suguru','numbrix','kakuro','ponti']],['Parole',['incastro','crucipuzzle','cifrato']],['Logica e spazio',['scacchi','matto','logica','labgioca','tangioca','penta','crucipixel','mahjong']],['Memoria e attenzione',['memory','kim','lista','sequenze','corsi']],['Arte e colori',['colora','copia']]], placed={};
+  if(state.settings.simple) GROUPS=[['Per cominciare',['colora','memory','kim','lista','sequenze','sudoku','labgioca','crucipuzzle']],['Altri giochi',['corsi','copia','tangioca','logica','incastro','futoshiki','suguru','numbrix','crucipixel','ponti','kakuro','cifrato','mahjong','penta','scacchi','matto','hexadoku']]];
   GROUPS.forEach(function(gr){ gr[1].forEach(function(g){ placed[g]=1; }); }); var rest=Object.keys(GEN).filter(function(g){ return !placed[g]; }); if(rest.length) GROUPS.push(['Altri',rest]);
   html+='</div>'; GROUPS.forEach(function(gr){ html+='<h2 class="ggroup">'+gr[0]+'</h2><div class="gcards">'; gr[1].filter(function(g){ return GEN[g]; }).forEach(function(g){ var G=GEN[g];
     html+='<section class="gcard"><div class="row" style="justify-content:space-between">'+(ICO[g]||'')+'<button class="btn small rulesbtn" data-r="'+g+'">? Regole</button></div><h3>'+G.name+'</h3><p class="evidence">'+G.desc+'</p><div class="lvls">'+
@@ -9066,6 +9236,15 @@ memory:{ cosa:'Il mio memory', perche:'Carte coperte da girare due alla volta pe
     { t:'Da stampare', p:['Stampa su cartoncino; il retro deve essere uguale per tutte le carte, altrimenti si riconoscono. Con le tue foto diventa un regalo personale.'] } ],
   guida:['Scegli che cosa c’è sulle carte e il tipo di coppia.','Scegli quante coppie, poi <b>Riempi in automatico</b> e cambia le coppie che vuoi (× per toglierne una, <b>Aggiungi una coppia</b>).','Per giocare al tavolo: <b>Stampa anche il retro delle carte</b>.'] },
 
+lista:{ cosa:'La mia lista da ricordare', perche:'Ricordare parole, come la lista della spesa, con un trucco che aiuta davvero.', controllo:'parole ripetute, vuote o in comune con quelle per confondere',
+  strategie:['Raggruppa: «tre frutti, due attrezzi, due animali». Poi ripeti i gruppi.','Inventa una scena buffa che leghi ogni parola alla successiva, e immaginala bene.','Ripeti la lista nella testa una o due volte prima che sparisca.'],
+  lezioni:[
+    { t:'Il trucco conta', p:['Le parole sparse si dimenticano presto; le parole legate tra loro si ricordano meglio. I due trucchi più semplici sono raggruppare per tipo e inventare una piccola storia con immagini.','Una sintesi di 35 studi con persone anziane (Gross e colleghi, 2012) ha trovato che chi impara trucchi come questi migliora nei compiti di memoria, più di chi si limita a ripetere le prove. Nessun trucco è risultato migliore degli altri.'] },
+    { t:'Che cosa non sappiamo', p:['Gli stessi studi misurano soprattutto compiti simili a quelli allenati, come ricordare liste. Che il miglioramento si veda anche nella vita di tutti i giorni è molto meno dimostrato. È un gioco, non un test e non una cura.'] },
+    { t:'Le parole', p:['Si scelgono parole concrete, facili da immaginare: mela, chitarra, martello. Le parole astratte, come «libertà», si ricordano peggio.','Le parole personali funzionano benissimo: i nomi dei nipoti, i piatti di famiglia, le cose da comprare questa settimana.'] },
+    { t:'La difficoltà', p:['Più parole, più difficile. Una alla volta è più difficile che tutte insieme, perché non si possono ripassare.','Una pausa prima di rispondere rende il gioco più simile alla vita reale. E le parole per confondere dello stesso tipo (mela nella lista, pera tra le altre) costringono a ricordare la parola esatta, non solo il gruppo.'] } ],
+  guida:['Scegli <b>quante parole</b>, poi <b>Altre parole</b> finché la lista ti piace.','Scrivi le parole tue al posto di quelle proposte.','<b>Altre per confondere</b> cambia le parole di disturbo; spunta <b>dello stesso tipo</b> per rendere il gioco più difficile.'] },
+
 kim:{ cosa:'Il mio gioco di Kim', perche:'Guardare, ricordare e scoprire che cosa è sparito.', controllo:'oggetti e mancanti',
   strategie:['Dai un nome a ogni oggetto e ripetili in ordine.','Raggruppa: «tre cose da mangiare, due attrezzi».','Ricorda anche la posizione: in alto, in basso, al centro.'],
   lezioni:[
@@ -9096,7 +9275,7 @@ corsi:{ cosa:'Il mio percorso tra i blocchi', perche:'Ricordare un percorso tra 
 window.CORSI=CORSI;
 
 /* ===================== IL PERCORSO DI OGNI GIOCO: GIOCA → IMPARA → COME SI COSTRUISCE → CREA =====================
-   Per ognuno dei 24 giochi una pagina (#impara-<gioco>) che accompagna dal giocare al creare. La creazione non parte
+   Per ognuno dei 25 giochi una pagina (#impara-<gioco>) che accompagna dal giocare al creare. La creazione non parte
    da un foglio bianco: parte da una STRUTTURA già pronta (la partita appena giocata, oppure una partita nuova del
    livello scelto) che si apre nello strumento di Crea e si modifica passo per passo. I testi dei piccoli corsi sono
    in percorso-corsi.js (CORSI). */
@@ -9115,6 +9294,7 @@ var Percorso=(function(){
     crucipixel:{ tool:'crucipixel', conv:base('crucipixel') }, mahjong:{ tool:'mahjong', conv:function(d){ var x=keepMode('mahjong')(d); x.mode='crea'; return x; } },
     memory:{ tool:'memory', conv:base('memory') }, copia:{ tool:'copia', conv:function(d){ var x=base('copia')(d); x.kind='punti'; delete x.pu; delete x.sel; delete x.show; ['_p','_won','_day','title'].forEach(function(k){ delete x[k]; }); return x; } }, colora:{ tool:'colora', conv:function(d){ var x=base('colora')(d); x.view='col'; ['f','ff','my','sel','fsel','mode','hl','_p','_won','_day','title'].forEach(function(k){ delete x[k]; }); return x; } },
     kim:{ tool:'kim', conv:function(d){ var x=clone(TOOLS.kim.init()); ['n','k','mix','seed'].forEach(function(k){ if(d[k]!=null) x[k]=d[k]; }); return x; } },
+    lista:{ tool:'lista', conv:function(d){ var p=prepared('lista', d), x=clone(TOOLS.lista.init()); x.words=p.words.slice(); x.dis=p.dis.slice(); x.n=p.words.length; x.sim=p.sim>=1; x.one=!!p.one; x.seed=d.seed||1; return x; } },
     sequenze:{ tool:'sequenze', conv:function(d){ var x=clone(TOOLS.sequenze.init()); x.pads=d.pads; x.from=d.start; x.to=d.target; x.seed=d.seed; return x; } },
     corsi:{ tool:'corsi', conv:function(d){ var x=clone(TOOLS.corsi.init()); x.pads=d.pads; x.from=d.start; x.to=d.target; x.back=!!d.back; x.seed=d.seed; return x; } },
     penta:{ tool:'penta', conv:function(d){ var p=prepared('penta', d); return { W:d.w, H:d.h, region:p.region, pieces:null, seed:d.seed }; } },
@@ -9179,10 +9359,10 @@ var Percorso=(function(){
       '<a class="btn small" href="#impara-'+g+'">'+(gd?'← Torna al percorso':'Gioca e impara a crearlo →')+'</a></div>'; }
   function attach(tool){ var html=panel(tool); if(!html) return; var side=document.querySelector('#app .side'); if(!side || side.querySelector('.pguide')) return; side.insertAdjacentHTML('afterbegin', html); }
 
-  // la home: il percorso in tre tempi e i 24 giochi
-  var GROUPS=[['Numeri',['sudoku','hexadoku','futoshiki','suguru','numbrix','kakuro','ponti']],['Parole',['incastro','crucipuzzle','cifrato']],['Logica e spazio',['scacchi','matto','logica','labgioca','tangioca','penta','crucipixel','mahjong']],['Memoria e attenzione',['memory','kim','sequenze','corsi']],['Arte e colori',['colora','copia']]];
+  // la home: il percorso in tre tempi e i 25 giochi
+  var GROUPS=[['Numeri',['sudoku','hexadoku','futoshiki','suguru','numbrix','kakuro','ponti']],['Parole',['incastro','crucipuzzle','cifrato']],['Logica e spazio',['scacchi','matto','logica','labgioca','tangioca','penta','crucipixel','mahjong']],['Memoria e attenzione',['memory','kim','lista','sequenze','corsi']],['Arte e colori',['colora','copia']]];
   function home(){ var h='<section class="hero"><span class="label">Il laboratorio dei giochi da creare</span><h1>Gioca, impara, <span>crea</span>.</h1>'+
-      '<p>Per ognuno dei 24 giochi c’è un percorso: prima lo giochi, poi impari le regole e come si costruisce, infine crei il tuo partendo da una struttura pronta. L’app controlla, suggerisce e prepara la stampa. Ogni passo si annulla.</p>'+
+      '<p>Per ognuno dei 25 giochi c’è un percorso: prima lo giochi, poi impari le regole e come si costruisce, infine crei il tuo partendo da una struttura pronta. L’app controlla, suggerisce e prepara la stampa. Ogni passo si annulla.</p>'+
       '<ol class="tritempi"><li><b>Gioca</b><span>ogni partita è generata al momento, in cinque livelli</span></li><li><b>Impara</b><span>regole, esempi e un piccolo corso su come si costruisce</span></li><li><b>Crea</b><span>parti da una struttura e trasformala: poi stampa, condividi o fanne un libretto</span></li></ol>'+
       '<div class="row"><a class="btn primary" href="#gioca">Gioca subito</a><a class="btn" href="#crea">Tutti gli strumenti per creare</a><a class="btn" href="#guida">Come si usa</a></div></section>';
     GROUPS.forEach(function(gr){ h+='<h2 class="ggroup">'+gr[0]+'</h2><div class="pcards">'+gr[1].filter(function(g){ return GEN[g]; }).map(function(g){ var G=GEN[g];
@@ -9190,7 +9370,7 @@ var Percorso=(function(){
     h+='<section class="panel"><h2>Arte e benessere</h2><p>Colorare con i numeri un’opera d’arte scaricata da un museo o una tua foto, creare mandala, disegnare con calma: e che cosa dicono davvero gli studi sull’arte e sul colorare.</p><div class="row"><a class="btn primary" href="#p-colora-0">Colora un disegno</a><a class="btn" href="#colora" data-coimg="1">Colora un’opera d’arte</a><a class="btn" href="#arte">Che cosa dicono gli studi</a></div></section>';
     h+='<section class="panel"><h2>Enigmi celebri</h2><p>I sette ponti di Königsberg, le tre porte, il sudoku con 17 indizi, il messaggio di Zodiac: rompicapi famosi <b>risolti e spiegati</b>, e problemi <b>ancora aperti</b> che forse qualcuno risolverà.</p><a class="btn" href="#enigmi">Scopri gli enigmi celebri</a></section>';
     h+='<section class="panel"><h2>Altri strumenti per creare</h2><p>Mandala, disegni da colorare, trova le differenze, cruciverba con le tue definizioni, rebus, giochi di squadra e <b>Crea un libro</b> per stampare, regalare o pubblicare un libretto: li trovi in <a href="#crea">Crea</a>.</p></section>'+
-      '<p class="note">Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.26.</p>';
+      '<p class="note">Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.27.</p>';
     app.innerHTML=h; }
 
   // un solo riquadro che spiega tutti i modi di portare fuori un gioco, sopra i pulsanti Condividi e Stampa
@@ -9627,7 +9807,7 @@ function renderGuide(){
   var html='<section class="toolhead"><h1>Come si usa</h1><p>Tutto quello che serve per creare, stampare e regalare i giochi. Si legge in dieci minuti; puoi anche saltare direttamente alla parte che ti interessa.</p></section><div class="guide"><nav class="gtoc" aria-label="Indice"><ol>'+toc.map(function(x){ return '<li><a href="#guida" data-g="'+x[0]+'">'+x[1]+'</a></li>'; }).join('')+'</ol></nav><div class="gbody">'+
   sec('cose','Che cos’è AttivaMente','<p>È un laboratorio per <b>giocare, imparare e creare</b> giochi. Si comincia giocando; poi si impara come è costruito il gioco; infine si crea il proprio. I giochi sono: labirinti, mandala, cruciverba, sudoku, Mahjong e molti altri. Non è un’app che fa giocare al posto tuo: sei tu a disegnare, scegliere le parole, costruire lo schema. L’app fa il lavoro noioso e rigoroso: controlla che il gioco rispetti le regole e, nei rompicapi che lo richiedono, che la soluzione sia una sola; prepara la stampa e la soluzione.</p><p>Funziona su telefono, tablet e computer, gratis, senza account e senza pubblicità.</p>')+
   sec('gioca','Giocare','<p>Nella pagina <a href="#gioca">Gioca</a> trovi partite create all\u2019istante e verificate (nei rompicapi la soluzione è una sola), in cinque livelli: Principiante, Facile, Medio, Difficile, Esperto. Ogni giorno c\u2019è anche il gioco del giorno, uguale per tutti. Ci sono rompicapi di numeri (sudoku, Hexadoku, Futoshiki, Suguru, Numbrix, Kakuro, Ponti), di parole (parole a incastro, crucipuzzle, crittografato), di logica e di spazio (enigma logico, labirinto, tangram, pentamini, crucipixel), tre giochi di memoria (Che cosa manca?, Sequenze, Blocchi di Corsi) e il Mahjong, che all\u2019Esperto usa il doppio mazzo da 288 tessere. Quasi tutti si possono anche creare: in Crea trovi lo stesso gioco con gli strumenti per progettarlo, verificarlo e stamparlo. Le statistiche (partite vinte, tempo migliore) restano solo sul tuo dispositivo. In ogni gioco il pulsante <b>? Come si gioca</b> spiega le regole e, in quasi tutti i giochi, mostra un esempio risolto passo passo.</p>')+
-  sec('percorso','Gioca, impara, crea','<p>Per ognuno dei 24 giochi c’è un <b>percorso</b> in quattro tappe (lo apri dalla pagina <a href="#home">Inizia</a> o dal link «Impara a crearlo» in Gioca):</p><ol class="gsteps"><li><b>Gioca</b>: ogni partita viene creata al momento, dal Principiante all’Esperto.</li><li><b>Impara le regole</b>: lo scopo, le regole, un esempio passo passo e come si ragiona.</li><li><b>Come si costruisce</b>: un piccolo corso su che cosa rende buono quel gioco e come lo prepara chi lo inventa.</li><li><b>Crea il tuo</b>: non parti da un foglio bianco (tranne negli scacchi, dove prepari tu una posizione nuova su una scacchiera vuota). L’app apre in Crea una <b>struttura pronta</b> (la partita che hai appena giocato, oppure una nuova del livello che scegli) e tu la trasformi; l’app controlla ogni passo.</li></ol><p>Anche durante una partita trovi il pulsante <b>Crealo tu</b>.</p>')+
+  sec('percorso','Gioca, impara, crea','<p>Per ognuno dei 25 giochi c’è un <b>percorso</b> in quattro tappe (lo apri dalla pagina <a href="#home">Inizia</a> o dal link «Impara a crearlo» in Gioca):</p><ol class="gsteps"><li><b>Gioca</b>: ogni partita viene creata al momento, dal Principiante all’Esperto.</li><li><b>Impara le regole</b>: lo scopo, le regole, un esempio passo passo e come si ragiona.</li><li><b>Come si costruisce</b>: un piccolo corso su che cosa rende buono quel gioco e come lo prepara chi lo inventa.</li><li><b>Crea il tuo</b>: non parti da un foglio bianco (tranne negli scacchi, dove prepari tu una posizione nuova su una scacchiera vuota). L’app apre in Crea una <b>struttura pronta</b> (la partita che hai appena giocato, oppure una nuova del livello che scegli) e tu la trasformi; l’app controlla ogni passo.</li></ol><p>Anche durante una partita trovi il pulsante <b>Crealo tu</b>.</p>')+
   sec('crea','Creare un gioco','<ol class="gsteps"><li><b>Scegli un gioco</b> dalla pagina <a href="#home">Giochi</a>. I giochi sono divisi in famiglie: Disegno e spazio, Parole, Numeri logica e tavolo, Squadra.</li><li><b>Segui il riquadro Passo passo</b> a destra (sul telefono, sotto il foglio). Con il pulsante a forma di altoparlante le istruzioni vengono lette ad alta voce.</li><li><b>Crea</b>: tocca, disegna, scrivi. Puoi provare e correggere: <b>Annulla</b> torna indietro di un passo, <b>Ripeti</b> lo rifà, <b>Ricomincia da capo</b> dà un foglio nuovo (e anche quello si annulla).</li><li><b>Premi Controlla</b>: l’app ti dice se il gioco funziona e, se no, che cosa sistemare. Per esempio: la strada del labirinto arriva all’uscita? Il sudoku ha una sola soluzione? Le parole del cruciverba esistono?</li><li><b>Dai un titolo e una dedica</b> nel riquadro "Per chi è?": compaiono in cima al foglio stampato.</li></ol><p class="evidence">Alcuni giochi usano il dizionario italiano (cruciverba a schema, crittografato, anagrammi, ruota di lettere). La prima volta serve la connessione per scaricarlo (circa 3 MB); poi resta sul dispositivo.</p>')+
   sec('esporta','Esportare e condividere','<p>In ogni strumento di Crea il riquadro <b>Esporta e condividi</b> riassume tutti i modi per portare fuori un gioco:</p><ul><li><b>Su carta</b>: Stampa. Esce un foglio pulito, con la soluzione su una pagina a parte.</li><li><b>In PDF</b>: Stampa e, come stampante, scegli «Salva come PDF». Il PDF si manda per email o WhatsApp e si stampa anche in copisteria.</li><li><b>Da giocare sullo schermo</b>: Crea il link da giocare; con il QR code il link si stampa su un biglietto.</li><li><b>Come immagine</b>: Scarica immagine (un file SVG, che si inserisce in documenti e presentazioni).</li><li><b>In un libretto</b>: salva i tuoi giochi e raccoglili con <a href="#libro">Crea un libro</a>.</li><li><b>Su un altro dispositivo</b>: I miei lavori → Esporta file, poi Importa.</li></ul>')+
   sec('libretto','Il tuo libretto: crearlo, regalarlo, venderlo','<h3>Crearlo</h3><ol class="gsteps"><li><b>Crea i giochi</b> seguendo i percorsi (pagina <a href="#home">Inizia</a>) e premi <b>Salva nei miei lavori</b> per ognuno. Usa temi, nomi e parole di chi lo riceverà: è questo che rende un libretto unico.</li><li>Apri <a href="#libro">Crea un libro</a>: spunta i giochi che hai creato tu e, se vuoi, aggiungi giochi nuovi creati dall’app. Scrivi titolo, sottotitolo, autore; <b>riscrivi l’introduzione con parole tue</b> (quella proposta è solo un esempio). Scegli il formato.</li><li>Premi <b>Prepara il libro</b> e guarda l’anteprima; <b>Controlla</b> ti avverte se mancano pagine o se i margini non bastano per KDP.</li><li><b>Stampa → Salva come PDF</b>, con margini «Nessuno» e grafica di sfondo attiva. Le soluzioni sono in fondo al libro. Apri sempre il PDF e sfoglialo tutto prima di usarlo.</li></ol>'+

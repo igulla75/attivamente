@@ -2,6 +2,19 @@
 
 App web gratuita che accompagna il corso. Funziona su telefono, tablet e computer, si può installare come un'icona e lavora anche senza connessione. Nessun account, nessun dato inviato: tutto resta sul dispositivo.
 
+## Versione 3.27 (9 novembre 2026)
+- **Nuovo gioco: La lista da ricordare.** Si leggono alcune parole, tutte insieme oppure una alla volta, e poi si ritrovano in mezzo ad altre. Ci sono cinque livelli, da 5 a 15 parole. Dal livello Facile c'è una piccola pausa prima di rispondere. Nei livelli alti le parole per confondere sono dello stesso tipo, per esempio «pera» se nella lista c'era «mela».
+  - Il gioco suggerisce un trucco per ricordare: raggruppare le parole per tipo, oppure inventare una piccola storia che le colleghi.
+  - In Crea si scrivono parole proprie, come i nomi dei nipoti o la lista della spesa. Si stampano il foglio da leggere, il foglio da cerchiare e la pagina per chi conduce, oppure si manda il gioco come link.
+  - È il quinto gioco della famiglia Memoria e attenzione ed è l'unico sulla memoria delle parole: gli altri quattro usano figure, colori e posizioni.
+- Verifica in `VERIFICA-3.27.md` (nei sorgenti).
+
+## Versione 3.26 (8 novembre 2026)
+- **Colorare con i numeri solo da opere d'arte e foto**, in sei livelli: da circa 100 zone a migliaia di zone, fino a 200 colori. Già al livello Principiante il dipinto si riconosce. C'è un'opera d'esempio (Albert Bierstadt, 1863, Metropolitan Museum, pubblico dominio) e l'originale si vede accanto al disegno. Anche «Disegno con la griglia» parte solo da un'opera o da una foto. Verifica in `VERIFICA-3.26.md`.
+
+## Versione 3.25 (8 novembre 2026)
+- **Livello Maestro** in Colorare con i numeri, fino a 200 colori. Verifica in `VERIFICA-3.25.md`.
+
 ## Versione 3.24 (8 novembre 2026)
 - **Disegni da colorare molto più belli e ricchi.** Ogni disegno ora nasce come un piccolo dipinto, ogni volta nuovo, con sfumature, luci e ombre, poi viene diviso in zone. Ai livelli alti ci sono molti più particolari e colori: fino a 30 colori e, all’Esperto, di solito da 150 a 350 zone.
 - **Le tue foto e le opere d’arte** si trasformano con lo stesso metodo, a una risoluzione più alta e con i colori ravvivati: si riconoscono molto meglio.
@@ -61,7 +74,7 @@ App web gratuita che accompagna il corso. Funziona su telefono, tablet e compute
 - Verifica documentata in `VERIFICA-3.13.md` (nei sorgenti).
 
 ## Versione 3.12 (7 novembre 2026)
-- **Gioca, impara, crea**: per ognuno dei 22 giochi un percorso in quattro tappe (gioca, impara le regole, come si costruisce, crea il tuo). Si crea partendo da una struttura pronta: la partita appena giocata o una nuova. Pulsante **Crealo tu** in ogni partita.
+- **Gioca, impara, crea**: per ognuno dei giochi un percorso in quattro tappe (gioca, impara le regole, come si costruisce, crea il tuo). Si crea partendo da una struttura pronta: la partita appena giocata o una nuova. Pulsante **Crealo tu** in ogni partita.
 - **22 piccoli corsi** su come si costruisce ogni gioco, con esempi e figure.
 - **Esporta e condividi**: un riquadro in ogni strumento spiega tutti i modi di portare fuori un gioco.
 - **Crea un libro** con i giochi che hai creato tu, con le pagine da ritagliare e la pagina del copyright; avvisi per Amazon KDP. Nella guida: come creare, regalare e vendere un libretto, con le regole di KDP verificate.

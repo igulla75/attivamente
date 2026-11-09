@@ -2083,7 +2083,7 @@ function renderHome(){
     });
     html += '</div></section>';
   });
-  html += '</div><p class="note">Le etichette (studi controllati, studi preliminari, per analogia) dicono che tipo di studi esiste oggi su ciascun tipo di gioco. Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.27.</p>';
+  html += '</div><p class="note">Le etichette (studi controllati, studi preliminari, per analogia) dicono che tipo di studi esiste oggi su ciascun tipo di gioco. Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.28.</p>';
   app.innerHTML = html;
 }
 
@@ -4794,7 +4794,7 @@ function setSeg(id, v){ var el=$(id); if(el) el.querySelectorAll('[data-v]').for
 function Tool(def){
   var key=def.id, d;
   if(state.openWork && state.openWork.tool===key){ var w=state.openWork; d=clone(w.data); d.title=w.title; d.dedica=w.dedica; d.workId=w.id; state.openWork=null; }
-  else if(state.drafts[key]) d=clone(state.drafts[key]);
+  else if(state.drafts[key] && !(def.oldDraft && def.oldDraft(state.drafts[key]))) d=clone(state.drafts[key]);
   else { d=def.init(); d.title=def.defTitle; d.dedica=''; }
   var META={title:1,dedica:1,workId:1}, undo=[], redo=[];
   var ctx={ d:d, ui:{}, def:def, tremor:!!state.settings.tremor };
@@ -8363,6 +8363,8 @@ TOOLS.colora.play={
   solInPlace:{ show:'Mostra il disegno finito', hide:'Riprendi la partita', ask:'Vuoi vedere il disegno finito, già colorato?', note:'Questo è il disegno finito. Premi «Riprendi la partita» per tornare a colorare: le zone che hai già colorato restano.' },
   print:function(ctx){ TOOLS.colora.play.render(ctx); }
 };
+// partite e bozze delle versioni prima della 3.26, con i disegni creati dall'app (paesaggi, mandala…): non si riaprono più da sole
+TOOLS.colora.oldDraft=function(d){ return !!(d && d.theme && d.theme!=='foto'); };
 
 /* ===================== COPIA CON LA GRIGLIA =====================
    Due esercizi:
@@ -8478,6 +8480,8 @@ TOOLS.copia.play={
   solution:function(ctx){ return TOOLS.copia.solution(ctx); },
   print:function(ctx){ TOOLS.copia.render(ctx); }
 };
+// bozze delle versioni prima della 3.26 con un disegno creato dall'app al posto di un'opera o di una foto
+TOOLS.copia.oldDraft=function(d){ return !!(d && d.img && d.img.theme && d.img.theme!=='foto'); };
 
 /* ===================== COME SI GIOCA: regole ed esempi passo passo ===================== */
 (function(){
@@ -9014,7 +9018,7 @@ function GiocaSession(g, L, daily){ var G=GEN[g]; if(!G){ location.hash='#gioca'
   var life={ dead:false, inner:null }, seed = daily ? daySeed()*31+Object.keys(GEN).indexOf(g)*7 : (Date.now()%2147483647);
   app.innerHTML='<div class="note waiting" role="status"><span class="spin" aria-hidden="true"></span> Preparo una partita nuova ('+(G_LEVELS[L]||'Maestro')+')… <small>'+((typeof WG!=='undefined' && WG.supports(g))?'Ai livelli alti può volerci qualche secondo: intanto la pagina resta utilizzabile.':'Ai livelli alti può volerci qualche secondo.')+'</small></div>';
   var pkey='play:'+g+':'+L+(daily?':d':''), sv=state.drafts[pkey];
-  var resume = sv && sv._p && !sv._won && (!daily || sv._day===dayKey());
+  var resume = sv && sv._p && !sv._won && (!daily || sv._day===dayKey()) && !(TOOLS[g] && TOOLS[g].oldDraft && TOOLS[g].oldDraft(sv));
   var go=function(){ if(life.dead) return; if(resume){ Share.decode(sv._p).then(function(d0){ if(!life.dead) launch(sv._p, d0, true); }, function(){ resume=false; go(); }); return; } setTimeout(function(){ if(life.dead) return; (typeof WG!=='undefined'?WG.make(g, L, seed):Promise.resolve().then(function(){ return G.make(L, seed); })).catch(function(){ return null; }).then(function(d){ if(life.dead) return;
       if(!d){ app.innerHTML='<div class="note">Non sono riuscita a preparare la partita. <a href="#p-'+g+'-'+L+'">Riprova</a></div>'; return; }
       d.title=G.name+' · '+(G_LEVELS[L]||'Maestro')+(daily?' · gioco del giorno':'');
@@ -9292,7 +9296,7 @@ var Percorso=(function(){
     incastro:{ tool:'incastro', conv:keepMode('incastro') }, crucipuzzle:{ tool:'crucipuzzle', conv:base('crucipuzzle') },
     cifrato:{ tool:'cifrato', conv:base('cifrato') }, logica:{ tool:'logica', conv:base('logica') },
     crucipixel:{ tool:'crucipixel', conv:base('crucipixel') }, mahjong:{ tool:'mahjong', conv:function(d){ var x=keepMode('mahjong')(d); x.mode='crea'; return x; } },
-    memory:{ tool:'memory', conv:base('memory') }, copia:{ tool:'copia', conv:function(d){ var x=base('copia')(d); x.kind='punti'; delete x.pu; delete x.sel; delete x.show; ['_p','_won','_day','title'].forEach(function(k){ delete x[k]; }); return x; } }, colora:{ tool:'colora', conv:function(d){ var x=base('colora')(d); x.view='col'; ['f','ff','my','sel','fsel','mode','hl','_p','_won','_day','title'].forEach(function(k){ delete x[k]; }); return x; } },
+    memory:{ tool:'memory', conv:base('memory') }, copia:{ tool:'copia', conv:function(d){ var x=base('copia')(d); x.kind='punti'; delete x.pu; delete x.sel; delete x.show; ['_p','_won','_day','title'].forEach(function(k){ delete x[k]; }); return x; } }, colora:{ tool:'colora', conv:function(d){ if(TOOLS.colora.oldDraft(d)) return null; var x=base('colora')(d); x.view='col'; ['f','ff','my','sel','fsel','mode','hl','_p','_won','_day','title'].forEach(function(k){ delete x[k]; }); return x; } },
     kim:{ tool:'kim', conv:function(d){ var x=clone(TOOLS.kim.init()); ['n','k','mix','seed'].forEach(function(k){ if(d[k]!=null) x[k]=d[k]; }); return x; } },
     lista:{ tool:'lista', conv:function(d){ var p=prepared('lista', d), x=clone(TOOLS.lista.init()); x.words=p.words.slice(); x.dis=p.dis.slice(); x.n=p.words.length; x.sim=p.sim>=1; x.one=!!p.one; x.seed=d.seed||1; return x; } },
     sequenze:{ tool:'sequenze', conv:function(d){ var x=clone(TOOLS.sequenze.init()); x.pads=d.pads; x.from=d.start; x.to=d.target; x.seed=d.seed; return x; } },
@@ -9370,7 +9374,7 @@ var Percorso=(function(){
     h+='<section class="panel"><h2>Arte e benessere</h2><p>Colorare con i numeri un’opera d’arte scaricata da un museo o una tua foto, creare mandala, disegnare con calma: e che cosa dicono davvero gli studi sull’arte e sul colorare.</p><div class="row"><a class="btn primary" href="#p-colora-0">Colora un disegno</a><a class="btn" href="#colora" data-coimg="1">Colora un’opera d’arte</a><a class="btn" href="#arte">Che cosa dicono gli studi</a></div></section>';
     h+='<section class="panel"><h2>Enigmi celebri</h2><p>I sette ponti di Königsberg, le tre porte, il sudoku con 17 indizi, il messaggio di Zodiac: rompicapi famosi <b>risolti e spiegati</b>, e problemi <b>ancora aperti</b> che forse qualcuno risolverà.</p><a class="btn" href="#enigmi">Scopri gli enigmi celebri</a></section>';
     h+='<section class="panel"><h2>Altri strumenti per creare</h2><p>Mandala, disegni da colorare, trova le differenze, cruciverba con le tue definizioni, rebus, giochi di squadra e <b>Crea un libro</b> per stampare, regalare o pubblicare un libretto: li trovi in <a href="#crea">Crea</a>.</p></section>'+
-      '<p class="note">Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.27.</p>';
+      '<p class="note">Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.28.</p>';
     app.innerHTML=h; }
 
   // un solo riquadro che spiega tutti i modi di portare fuori un gioco, sopra i pulsanti Condividi e Stampa

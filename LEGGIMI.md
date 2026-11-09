@@ -2,6 +2,11 @@
 
 App web gratuita che accompagna il corso. Funziona su telefono, tablet e computer, si può installare come un'icona e lavora anche senza connessione. Nessun account, nessun dato inviato: tutto resta sul dispositivo.
 
+## Versione 3.28 (9 novembre 2026)
+- **Aggiornamenti visibili subito.** Prima, dopo una pubblicazione, il telefono o il computer potevano continuare a mostrare la versione vecchia, salvata per funzionare senza connessione. Ora l'app chiede sempre prima la pagina alla rete e usa la copia salvata solo senza connessione. Chi aveva una versione precedente vede la nuova dopo averla aperta due o tre volte, oppure subito ricaricando la pagina senza cache (Ctrl+Maiusc+R sul computer).
+- **I disegni creati dall'app non tornano più.** Le bozze e le partite lasciate a metà nelle versioni prima della 3.26, con i paesaggi, i mandala e gli altri disegni creati dall'app, non si riaprono più da sole in Colorare con i numeri e in Copia con la griglia: si parte dall'opera d'esempio o dalla scelta dell'immagine. I lavori salvati apposta in «I miei lavori» restano.
+- Verifica in `VERIFICA-3.28.md` (nei sorgenti).
+
 ## Versione 3.27 (9 novembre 2026)
 - **Nuovo gioco: La lista da ricordare.** Si leggono alcune parole, tutte insieme oppure una alla volta, e poi si ritrovano in mezzo ad altre. Ci sono cinque livelli, da 5 a 15 parole. Dal livello Facile c'è una piccola pausa prima di rispondere. Nei livelli alti le parole per confondere sono dello stesso tipo, per esempio «pera» se nella lista c'era «mela».
   - Il gioco suggerisce un trucco per ricordare: raggruppare le parole per tipo, oppure inventare una piccola storia che le colleghi.

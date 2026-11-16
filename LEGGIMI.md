@@ -2,6 +2,32 @@
 
 App web gratuita che accompagna il libro «AttivaMente – Dal gioco alla creazione» e il corso. Funziona su telefono, tablet e computer, si può installare come un'icona e lavora anche senza connessione. Nessun account, nessuna pubblicità, nessun conteggio delle visite: i lavori restano sul dispositivo e l'app non chiede niente a servizi esterni (anche i caratteri sono dentro l'app). Come per ogni sito, la pagina e il dizionario si scaricano dal sito dove l'app è pubblicata.
 
+## Versione 3.40 (16 novembre 2026)
+Risposta alla verifica indipendente della 3.39.
+- **Colorare con i numeri:** le quattro figure dell'esempio hanno una descrizione completa per i lettori di schermo. Per ogni zona dicono dove sta, il suo numero e se è ancora bianca, grigia (del colore scelto) o colorata.
+- **Codice Morse:** nelle descrizioni i segni si leggono a parole («punto», «linea»), non come simboli.
+- Piccole correzioni di grammatica nelle descrizioni delle griglie («una riga»).
+- Verifica in `VERIFICA-3.40.md` (nei sorgenti).
+
+## Versione 3.39 (15 novembre 2026)
+Risposta alla verifica indipendente della 3.38.
+- **Esempio del Sudoku 4×4 corretto.** La griglia di partenza ammetteva due soluzioni, e la figura finale contraddiceva un numero dato. Ora la griglia ha una sola soluzione, ogni figura rispetta i numeri dati e la soluzione, e ogni passo nomina la casella anche per posizione («prima riga, seconda colonna»), non solo per colore. Una prova automatica controlla tutto questo.
+- **Figure accessibili.** Ogni figura degli esempi e degli esercizi ha una descrizione per i lettori di schermo:
+  - le griglie si leggono riga per riga, con le caselle evidenziate dette per posizione;
+  - le scacchiere elencano i pezzi con la loro casella;
+  - la dama descrive pedine e percorso di presa;
+  - Kakuro, Ponti, Futoshiki, Suguru e la tabella degli enigmi logici descrivono somme, ponti, segni e regioni.
+- Due esercizi sono cambiati perché ripetevano l'esempio: enigma logico e crucipixel.
+- Verifica in `VERIFICA-3.39.md` (nei sorgenti).
+
+## Versione 3.38 (15 novembre 2026)
+- **Per ogni gioco un esempio completo e un esercizio.**
+  - **Esempio passo passo:** prima c'era per 16 giochi, ora per tutti e 48 gli strumenti con regole, con un disegno a ogni passo (anche i giochi di squadra, di memoria e d'arte). Il rebus ha un esempio più completo.
+  - **Esercizio:** una domanda con un disegno e tre risposte, una sola giusta. Se si sbaglia, la risposta si spegne e si riprova; dopo due errori l'app mostra la risposta giusta. Sempre con la spiegazione.
+  - Alla fine dell'esempio c'è «Ora prova tu»; dopo l'esercizio, «Ora gioca una partita», al livello Principiante.
+- **Dove si trovano:** nel percorso Impara («Guarda un esempio passo passo», «Fai l'esercizio») e in ogni gioco, in Gioca e in Crea, dal pulsante «? Come si gioca», che ora ha quattro schede: Le regole, Esempio passo passo, Esercizio, Come si crea.
+- Verifica in `VERIFICA-3.38.md` (nei sorgenti).
+
 ## Versione 3.37 (15 novembre 2026)
 Risposta alla verifica indipendente della 3.36.
 - **Inventa un gioco** accetta anche giochi senza vincitore: il campo si chiama «Come finisce» (chi vince, quando è risolto, o quando il gioco è concluso). La domanda di prova sulla soluzione unica vale solo per gli enigmi che la promettono.

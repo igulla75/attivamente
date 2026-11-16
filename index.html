@@ -154,6 +154,8 @@ input.wide{min-height:var(--hit);padding:0 12px;border:1px solid var(--rule);bor
 .rpic{display:flex;justify-content:center}
 .rx{width:100%;height:auto}
 .rnav{justify-content:space-between}
+.esopts{display:flex;flex-direction:column;gap:8px;margin:10px 0}.esopt{justify-content:flex-start;text-align:left}.rdlg .btn.esopt.ok,.rdlg .btn.esopt.ok:disabled{border-color:#2e7d32;background:#e3f4e6;color:#1d5a2a;opacity:1;font-weight:700}.rdlg .btn.esopt.ko,.rdlg .btn.esopt.ko:disabled{border-color:#b3261e;background:#fdecea;color:#7a1a14;opacity:1}
+.esout p{padding:10px 14px;border-radius:10px;margin:6px 0}.esok{background:#e3f4e6;color:#1d5a2a}.esko{background:#fdf1e3;color:#6b3a06}.rtabs{flex-wrap:wrap}
 .rtext{font-size:1.05em}
 .gcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:12px;margin-top:14px}
 .gcard{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px;display:grid;gap:8px;align-content:start}
@@ -2154,7 +2156,7 @@ function renderHome(){
     });
     html += '</div></section>';
   });
-  html += '</div><p class="note">Le etichette (studi controllati, studi preliminari, per analogia) dicono che tipo di studi esiste oggi su ciascun tipo di gioco. Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.37.</p>';
+  html += '</div><p class="note">Le etichette (studi controllati, studi preliminari, per analogia) dicono che tipo di studi esiste oggi su ciascun tipo di gioco. Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.40.</p>';
   app.innerHTML = html;
 }
 
@@ -9204,7 +9206,14 @@ document.addEventListener('click', function(e){ var a=e.target.closest && e.targ
 /* ===================== COME SI GIOCA: regole ed esempi passo passo ===================== */
 (function(){
 // piccola griglia illustrata: v = righe di caratteri ('#' nera, '.' vuota, altro = testo); hi = {"r,c":colore}; note = {"r,c":testo piccolo}
-function G(v, o){ o=o||{}; var cs=o.cs||44, h=v.length, w=v[0].length, s='<svg viewBox="-3 -3 '+(w*cs+6)+' '+(h*cs+6)+'" class="rx" xmlns="http://www.w3.org/2000/svg" style="max-width:'+(w*cs+6)+'px">';
+// descrizioni per i lettori di schermo: la griglia letta riga per riga, con le caselle evidenziate per posizione
+var ORD=['prima','seconda','terza','quarta','quinta','sesta','settima','ottava','nona','decima'];
+function posName(r,c){ return (ORD[r]||('riga '+(r+1)))+' riga, '+(ORD[c]||('colonna '+(c+1)))+' colonna'; }
+function altAttr(t){ return ' role="img" aria-label="'+String(t).replace(/"/g,'”').replace(/</g,'‹')+'"'; }
+function gridAlt(v, o){ var h=v.length, w=v[0].length, rows=[], hi=o.altHi===false?[]:Object.keys(o.hi||{});
+  for(var r=0;r<h;r++){ var c=[]; for(var j=0;j<w;j++){ var ch=v[r][j]; c.push(ch==='#'?(o.dark?'muro':'casella nera'):(ch==='.'||ch===' ')?'vuota':ch); } rows.push('riga '+(r+1)+': '+c.join(', ')); }
+  return (o.label||'Griglia di '+(h===1?'una riga':h+' righe')+' e '+(w===1?'una colonna':w+' colonne'))+'. '+rows.join('; ')+'.'+(hi.length?' Caselle evidenziate: '+hi.map(function(k){ var a=k.split(','); return posName(+a[0],+a[1]); }).join('; ')+'.':'')+(o.more?' '+o.more:''); }
+function G(v, o){ o=o||{}; var cs=o.cs||44, h=v.length, w=v[0].length, s='<svg viewBox="-3 -3 '+(w*cs+6)+' '+(h*cs+6)+'" class="rx" xmlns="http://www.w3.org/2000/svg" style="max-width:'+(w*cs+6)+'px"'+altAttr(gridAlt(v,o))+'>';
   for(var r=0;r<h;r++) for(var c=0;c<w;c++){ var ch=v[r][c], k=r+','+c, x=c*cs, y=r*cs;
     if(ch==='#'){ s+='<rect x="'+x+'" y="'+y+'" width="'+cs+'" height="'+cs+'" fill="'+(o.dark||'#1b2735')+'"/>'; continue; }
     s+='<rect x="'+x+'" y="'+y+'" width="'+cs+'" height="'+cs+'" fill="'+((o.hi&&o.hi[k])||'#ffffff')+'" stroke="#1b2735" stroke-width="1.5"/>';
@@ -9216,21 +9225,27 @@ function G(v, o){ o=o||{}; var cs=o.cs||44, h=v.length, w=v[0].length, s='<svg v
   return s+'</svg>'; }
 var Y='#ffe27a', B='#cfe8ff', V='#dff2e1', R='#ffd9d4';
 function K(cl, vals, hi){ // kakuro 3x3 con indizi: cl = {"r,c":{o:..,v:..}}
-  var cs=56, s='<svg viewBox="-3 -3 '+(3*cs+6)+' '+(3*cs+6)+'" class="rx" style="max-width:180px" xmlns="http://www.w3.org/2000/svg">';
+  var cs=56, al=['Kakuro 3 per 3.']; Object.keys(cl).forEach(function(k){ var q=cl[k], a=k.split(','); if(q.o) al.push('Riga '+a[0]+' somma '+q.o+'.'); if(q.v) al.push('Colonna '+a[1]+' somma '+q.v+'.'); }); Object.keys(vals).forEach(function(k){ var a=k.split(','); al.push('Riga '+a[0]+', colonna '+a[1]+': '+vals[k]+'.'); });
+  var s='<svg viewBox="-3 -3 '+(3*cs+6)+' '+(3*cs+6)+'" class="rx" style="max-width:180px" xmlns="http://www.w3.org/2000/svg"'+altAttr(al.join(' '))+'>';
   for(var r=0;r<3;r++) for(var c=0;c<3;c++){ var k=r+','+c, x=c*cs, y=r*cs; if(r===0||c===0){ s+='<rect x="'+x+'" y="'+y+'" width="'+cs+'" height="'+cs+'" fill="#3a4656" stroke="#1b2735"/>'; var q=cl[k]; if(q){ s+='<line x1="'+x+'" y1="'+y+'" x2="'+(x+cs)+'" y2="'+(y+cs)+'" stroke="#c8d0da"/>'; if(q.o) s+=txt(x+cs*0.7,y+cs*0.32,String(q.o),16,{anchor:'middle',base:'central',fill:'#fff',weight:700}); if(q.v) s+=txt(x+cs*0.3,y+cs*0.72,String(q.v),16,{anchor:'middle',base:'central',fill:'#fff',weight:700}); } continue; }
     s+='<rect x="'+x+'" y="'+y+'" width="'+cs+'" height="'+cs+'" fill="'+((hi&&hi[k])||'#fff')+'" stroke="#1b2735" stroke-width="1.5"/>'; if(vals[k]) s+=txt(x+cs/2,y+cs/2+1,String(vals[k]),26,{anchor:'middle',base:'central',fill:'#1f5fa8',weight:700}); }
   return s+'</svg>'; }
-function CZ(fills, nums, hide){ var Z=['M10 10H110L80 70H10Z','M110 10H190V70H80Z','M10 70H80L60 130H10Z','M80 70H190V130H60Z'], N=[[45,40,1],[150,40,2],[35,100,3],[130,100,2]], s='<svg viewBox="0 0 200 140" width="220" role="img" aria-label="Esempio di disegno con i numeri">';
+// la descrizione dice, per ognuna delle quattro zone, dove sta, il suo numero e se è ancora bianca, grigia (del colore scelto) o colorata
+var CZCOL={ '#fff':'bianca, da colorare', '#d4d4d4':'grigia: è del colore scelto, da colorare', '#7cb342':'colorata di verde', '#fb8c00':'colorata di arancione', '#1e88e5':'colorata di blu' };
+function CZalt(fills, nums, hide, N){ var W=['in alto a sinistra','in alto a destra','in basso a sinistra','in basso a destra'];
+  return 'Disegno con quattro zone. '+W.map(function(w,i){ return 'Zona '+w+(nums&&!(hide&&hide[i])?', numero '+N[i][2]:', numero '+N[i][2]+' (non più scritto)')+', '+(CZCOL[fills[i]]||'colorata')+'.'; }).join(' '); }
+function CZ(fills, nums, hide){ var Z=['M10 10H110L80 70H10Z','M110 10H190V70H80Z','M10 70H80L60 130H10Z','M80 70H190V130H60Z'], N=[[45,40,1],[150,40,2],[35,100,3],[130,100,2]], s='<svg viewBox="0 0 200 140" width="220" role="img" aria-label="'+CZalt(fills, nums, hide, N)+'">';
   Z.forEach(function(d,i){ s+='<path d="'+d+'" fill="'+fills[i]+'" stroke="#444" stroke-width="2"/>'; });
   if(nums) N.forEach(function(n,i){ if(hide && hide[i]) return; s+='<text x="'+n[0]+'" y="'+n[1]+'" font-size="20" text-anchor="middle" dominant-baseline="central" font-family="Arial" fill="#555">'+n[2]+'</text>'; });
   return s+'</svg>'; }
 var RULES = {
   sudoku:{ scopo:'Riempire la griglia in modo che ogni simbolo compaia una sola volta in ogni riga, in ogni colonna e in ogni riquadro.',
     regole:['La griglia è divisa in righe, colonne e riquadri (i gruppi bordati di nero).','In ogni riga, colonna e riquadro ogni simbolo compare una sola volta.','Alcune caselle sono già scritte: sono gli indizi e non si cambiano.','Non si tira a indovinare: c’è sempre un passo che si deduce con la logica (all’inizio, di solito, una casella dove un solo simbolo è possibile).','Variante diagonale: anche le due diagonali seguono la regola. Variante irregolare: i riquadri hanno forme diverse.','Regole in più, che si possono combinare: le quattro finestre tratteggiate e le caselle cerchiate al centro dei riquadri si comportano come riquadri in più (ogni simbolo una volta sola); nelle caselle grigie va un numero pari, nelle bianche un dispari.'],
-    passi:[{ t:'Ecco un sudoku 4×4: numeri da 1 a 4, quattro riquadri da 2×2.', f:function(){ return G(['1..4','..1.','.1..','3..1'],{box:[2,2]}); } },
-      { t:'Guarda la casella gialla. Nella sua riga ci sono già 1 e 4; nella sua colonna c’è il 3. Manca solo il 2: lo scriviamo.', f:function(){ return G(['1..4','..1.','.1..','3..1'],{box:[2,2],hi:{'0,1':Y}}); } },
-      { t:'Ora la riga in alto ha 1, 2, 4: manca il 3.', f:function(){ return G(['12.4','..1.','.1..','3..1'],{box:[2,2],hi:{'0,2':Y}}); } },
-      { t:'Si continua così, una casella alla volta: si cerca sempre quella dove resta un solo simbolo possibile.', f:function(){ return G(['1234','3412','2143','4321'],{box:[2,2],hi:{'1,0':V,'1,1':V,'1,3':V,'2,0':V,'2,2':V,'2,3':V,'3,1':V,'3,2':V}}); } }],
+    passi:[{ t:'Ecco un sudoku 4×4: numeri da 1 a 4, quattro riquadri da 2×2. Ha una sola soluzione.', f:function(){ return G(['1..4','..1.','2...','.32.'],{box:[2,2]}); } },
+      { t:'Guarda la casella gialla (prima riga, seconda colonna). Nella sua riga ci sono già 1 e 4; nella sua colonna c’è il 3. Resta solo il 2: lo scriviamo.', f:function(){ return G(['1..4','..1.','2...','.32.'],{box:[2,2],hi:{'0,1':Y}}); } },
+      { t:'Ora la riga in alto ha 1, 2 e 4: nella casella gialla (prima riga, terza colonna) manca il 3.', f:function(){ return G(['12.4','..1.','2...','.32.'],{box:[2,2],hi:{'0,2':Y}}); } },
+      { t:'Nella seconda riga, la casella sotto il 2 (seconda colonna) vede 1 e 2 nel suo riquadro e il 3 nella sua colonna: ci va il 4. Accanto, nel riquadro resta solo il 3.', f:function(){ return G(['1234','341.','2...','.32.'],{box:[2,2],hi:{'1,0':Y,'1,1':Y}}); } },
+      { t:'Si continua così, una casella alla volta, cercando sempre quella dove resta un solo numero possibile. Ecco la soluzione: rispetta tutti i numeri dati all’inizio.', f:function(){ return G(['1234','3412','2143','4321'],{box:[2,2],hi:{'1,3':V,'2,1':V,'2,2':V,'2,3':V,'3,0':V,'3,3':V}}); } }],
     crea:['Parti da una griglia completa e corretta (la "griglia pronta" va benissimo, poi premi Rimescola).','Passa a "Togli simboli" e tocca le caselle da nascondere, oppure fatti aiutare scegliendo il livello.','Premi Controlla: l’app ti dice se la soluzione è una sola e quanto è difficile.'] },
   kakuro:{ scopo:'Scrivere cifre da 1 a 9 nelle caselle bianche, come in un cruciverba di numeri.',
     regole:['Ogni gruppo di caselle bianche in fila (in orizzontale o in verticale) si chiama tratto.','Il numero nella casella nera dice la somma delle cifre del tratto: in alto a destra per il tratto orizzontale che parte da lì, in basso a sinistra per quello verticale che scende.','In un tratto le cifre devono essere tutte diverse.','Si usano solo le cifre da 1 a 9; lo zero non esiste.'],
@@ -9325,8 +9340,10 @@ RULES.tangioca={ scopo:'Ricomporre la sagoma nera con tutti i pezzi del tangram.
 RULES.penta={ scopo:'Riempire la forma con i pentamini, senza lasciare buchi.', regole:['Ogni pentamino è fatto di 5 quadratini; ce ne sono 12 diversi, ognuno con il nome di una lettera (F, I, L, N, P, T, U, V, W, X, Y, Z).','Ogni pezzo si usa una volta sola.','I pezzi si possono girare e capovolgere.','I pezzi non si sovrappongono e non escono dalla forma.','Il rettangolo 3×20 con tutti e 12 i pezzi ha solo 2 soluzioni: è una sfida famosa.'], passi:[], crea:['Disegna la forma toccando le caselle (il numero di caselle deve essere un multiplo di 5), premi Controlla: l\u2019app trova i pezzi e conta le soluzioni. Stampa sagoma, pezzi e soluzione.'] };
 
 // figure degli esempi: segni del futoshiki e bordi delle regioni del suguru
-function FS(v, hs, vs, o){ o=o||{}; o.cs=o.cs||48; o.extra=function(cs){ var e=''; hs.forEach(function(q){ e+='<rect x="'+((q[1]+1)*cs-9)+'" y="'+(q[0]*cs+cs/2-11)+'" width="18" height="22" fill="#fff"/>'+txt((q[1]+1)*cs, q[0]*cs+cs/2+1, q[2], 22, {anchor:'middle', base:'central', weight:700, fill:'#c2410c'}); }); vs.forEach(function(q){ e+='<rect x="'+(q[1]*cs+cs/2-11)+'" y="'+((q[0]+1)*cs-9)+'" width="22" height="18" fill="#fff"/>'+txt(q[1]*cs+cs/2, (q[0]+1)*cs+1, q[2], 22, {anchor:'middle', base:'central', weight:700, fill:'#c2410c'}); }); return e; }; return G(v, o); }
-function SG(v, reg, o){ o=o||{}; o.cs=o.cs||48; o.extra=function(cs){ var e='', h=reg.length, w=reg[0].length; for(var r=0;r<h;r++) for(var c=0;c<w;c++){ if(c+1<w && reg[r][c]!==reg[r][c+1]) e+='<line x1="'+((c+1)*cs)+'" y1="'+(r*cs)+'" x2="'+((c+1)*cs)+'" y2="'+((r+1)*cs)+'" stroke="#1b2735" stroke-width="5"/>'; if(r+1<h && reg[r][c]!==reg[r+1][c]) e+='<line x1="'+(c*cs)+'" y1="'+((r+1)*cs)+'" x2="'+((c+1)*cs)+'" y2="'+((r+1)*cs)+'" stroke="#1b2735" stroke-width="5"/>'; } return e+'<rect x="0" y="0" width="'+(w*cs)+'" height="'+(h*cs)+'" fill="none" stroke="#1b2735" stroke-width="5"/>'; }; return G(v, o); }
+function FSmore(hs, vs){ var t=[]; hs.forEach(function(q){ t.push('tra '+posName(q[0],q[1])+' e la casella a destra: '+(q[2]==='<'?'minore':'maggiore')); }); vs.forEach(function(q){ t.push('tra '+posName(q[0],q[1])+' e la casella sotto: '+(q[2]==='∧'?'quella sopra è minore':'quella sopra è maggiore')); }); return t.length?'Segni: '+t.join('; ')+'.':''; }
+function SGmore(reg){ var m={}; reg.forEach(function(row,r){ row.forEach(function(g,c){ (m[g]=m[g]||[]).push(posName(r,c)); }); }); return 'Regioni: '+Object.keys(m).map(function(g,i){ return 'regione '+(i+1)+' di '+m[g].length+' caselle ('+m[g].join('; ')+')'; }).join('. ')+'.'; }
+function FS(v, hs, vs, o){ o=o||{}; o.cs=o.cs||48; o.label='Futoshiki di '+v.length+' righe e '+v[0].length+' colonne'; o.more=FSmore(hs, vs); o.extra=function(cs){ var e=''; hs.forEach(function(q){ e+='<rect x="'+((q[1]+1)*cs-9)+'" y="'+(q[0]*cs+cs/2-11)+'" width="18" height="22" fill="#fff"/>'+txt((q[1]+1)*cs, q[0]*cs+cs/2+1, q[2], 22, {anchor:'middle', base:'central', weight:700, fill:'#c2410c'}); }); vs.forEach(function(q){ e+='<rect x="'+(q[1]*cs+cs/2-11)+'" y="'+((q[0]+1)*cs-9)+'" width="22" height="18" fill="#fff"/>'+txt(q[1]*cs+cs/2, (q[0]+1)*cs+1, q[2], 22, {anchor:'middle', base:'central', weight:700, fill:'#c2410c'}); }); return e; }; return G(v, o); }
+function SG(v, reg, o){ o=o||{}; o.cs=o.cs||48; o.label='Suguru di '+v.length+' righe e '+v[0].length+' colonne'; o.more=SGmore(reg); o.extra=function(cs){ var e='', h=reg.length, w=reg[0].length; for(var r=0;r<h;r++) for(var c=0;c<w;c++){ if(c+1<w && reg[r][c]!==reg[r][c+1]) e+='<line x1="'+((c+1)*cs)+'" y1="'+(r*cs)+'" x2="'+((c+1)*cs)+'" y2="'+((r+1)*cs)+'" stroke="#1b2735" stroke-width="5"/>'; if(r+1<h && reg[r][c]!==reg[r+1][c]) e+='<line x1="'+(c*cs)+'" y1="'+((r+1)*cs)+'" x2="'+((c+1)*cs)+'" y2="'+((r+1)*cs)+'" stroke="#1b2735" stroke-width="5"/>'; } return e+'<rect x="0" y="0" width="'+(w*cs)+'" height="'+(h*cs)+'" fill="none" stroke="#1b2735" stroke-width="5"/>'; }; return G(v, o); }
 RULES.futoshiki={ scopo:'Riempire la griglia con i numeri da 1 alla sua grandezza.', regole:['In ogni riga e in ogni colonna ogni numero compare una volta sola.','I segni tra due caselle vanno rispettati: < vuol dire che il numero a sinistra è più piccolo; ∧ che quello sopra è più piccolo.','Un numero con un segno < verso un altro non può essere il più grande; con > non può essere 1.','La punta del segno indica sempre il numero più piccolo: vale per < e >, e in verticale per ∧ (sopra più piccolo) e ∨ (sotto più piccolo).','La soluzione è una sola.','Regole in più, da combinare: anche sulle due diagonali i numeri sono tutti diversi; nelle caselle grigie va un numero pari, nelle bianche un dispari.'], passi:[{ t:'Una griglia 3×3: in ogni riga e colonna vanno 1, 2 e 3. Non c’è nessun numero, solo tre segni.', f:function(){ return FS(['...','...','...'],[[0,0,'<'],[0,1,'<']],[[1,1,'∧']]); } },{ t:'In alto c’è una catena: prima < seconda < terza. Con 1, 2 e 3 c’è un solo modo: 1, 2, 3.', f:function(){ return FS(['123','...','...'],[[0,0,'<'],[0,1,'<']],[[1,1,'∧']],{hi:{'0,0':Y,'0,1':Y,'0,2':Y}}); } },{ t:'Colonna di mezzo: il 2 è già in alto, restano 1 e 3. Il segno ∧ dice che quello sopra è più piccolo: sopra 1, sotto 3.', f:function(){ return FS(['123','.1.','.3.'],[[0,0,'<'],[0,1,'<']],[[1,1,'∧']],{hi:{'1,1':Y,'2,1':Y}}); } },{ t:'Riga di mezzo: restano 2 e 3. A destra c’è già un 3 in alto, quindi lì va 2 e a sinistra 3. L’ultima riga si completa da sola: 2, 3, 1. Risolto!', f:function(){ return FS(['123','312','231'],[[0,0,'<'],[0,1,'<']],[[1,1,'∧']],{hi:{'1,0':Y,'1,2':Y,'2,0':V,'2,2':V}}); } }], crea:['Premi Nuova griglia; tocca numeri e spazi tra le caselle per mostrare o nascondere numeri e segni; Controlla verifica che la soluzione sia una sola.'] };
 RULES.suguru={ scopo:'Riempire ogni regione con i numeri giusti.', regole:['Una regione di 1 casella contiene 1; di 2 caselle 1 e 2; di 3 caselle 1, 2 e 3; e così fino a 5.','Due numeri uguali non si toccano mai, nemmeno in diagonale.','La soluzione è una sola.','Regola in più, a scelta: nelle caselle grigie va un numero pari, nelle bianche un dispari.'], passi:[{ t:'Tre regioni: un quadrato di 4 caselle (numeri da 1 a 4), una colonna di 3 (da 1 a 3) e una striscia di 2 (1 e 2). L’1 in alto è dato.', f:function(){ return SG(['1..','...','...'],[[0,0,1],[0,0,1],[2,2,1]]); } },{ t:'La casella al centro tocca tutte le altre: il suo numero non può comparire da nessun’altra parte. La colonna di destra contiene per forza 1, 2 e 3: al centro va 4.', f:function(){ return SG(['1..','.4.','...'],[[0,0,1],[0,0,1],[2,2,1]],{hi:{'1,1':Y}}); } },{ t:'Nel quadrato restano 2 e 3. Se a sinistra in mezzo ci fosse il 2, toccherebbe tutte e due le caselle in basso a sinistra, dove un 2 serve: impossibile. Quindi lì va 3, e sopra al centro 2.', f:function(){ return SG(['12.','34.','...'],[[0,0,1],[0,0,1],[2,2,1]],{hi:{'1,0':Y,'0,1':Y}}); } },{ t:'Nella colonna di destra il 2 non può stare in alto né in mezzo (toccherebbero il 2 appena scritto): va in basso. Il resto viene da sé, regola dopo regola. Risolto!', f:function(){ return SG(['121','343','212'],[[0,0,1],[0,0,1],[2,2,1]],{hi:{'2,2':Y}}); } }], crea:['Puoi disegnare tu le regioni (Regioni), poi Trova i numeri; in Indizi scegli quali numeri mostrare.'] };
 RULES.numbrix={ scopo:'Scrivere tutti i numeri da 1 all\u2019ultimo formando un percorso.', regole:['Ogni numero è accanto al successivo: sopra, sotto, a destra o a sinistra (mai in diagonale).','Ogni casella contiene un numero, una volta sola: il percorso passa da tutte le caselle.','Alcuni numeri sono già scritti. La soluzione è una sola.','Suggerimento: conta le caselle tra due numeri dati: se 5 e 9 sono a quattro passi, la strada tra loro è obbligata.','Per scrivere un numero di due cifre premi le due cifre una dopo l’altra (per 12: prima 1, poi 2).'], passi:[{ t:'Una griglia 3×3: bisogna scrivere i numeri da 1 a 9. Sono dati 1, 3 e 9.', f:function(){ return G(['1.3','...','..9'],{cs:48}); } },{ t:'Tra 1 e 3 manca solo il 2, e deve toccare tutti e due: è la casella in alto al centro.', f:function(){ return G(['123','...','..9'],{cs:48,hi:{'0,1':Y}}); } },{ t:'Dopo il 3 viene il 4: l’unica casella libera accanto al 3 è sotto. Il 5 va al centro, perché l’altra vicina del 4 è già il 9.', f:function(){ return G(['123','.54','..9'],{cs:48,hi:{'1,2':Y,'1,1':Y}}); } },{ t:'Mancano 6, 7 e 8, e la strada deve finire al 9. Se il 6 andasse sotto il 5, l’ultimo numero resterebbe lontano dal 9. Quindi 6 a sinistra, poi 7 e 8 in basso, fino al 9. Risolto!', f:function(){ return G(['123','654','789'],{cs:48,hi:{'1,0':Y,'2,0':Y,'2,1':Y}}); } }], crea:['In Percorso disegni tu la strada da 1 all\u2019ultimo numero; in Indizi scegli quali numeri lasciare, oppure premi Indizi minimi.'] };
@@ -9337,15 +9354,17 @@ RULES.matto={ scopo:'Trovare lo scacco matto nel numero di mosse indicato.', reg
 RULES.corso={ scopo:'Imparare le regole degli scacchi, una lezione alla volta.', regole:['Scegli una lezione dall\u2019elenco e leggi.','Negli esercizi tocca le caselle giuste sulla scacchiera.','Quando hai finito, gioca contro il computer in Gioca.'], passi:[], crea:[] };
 RULES.binario={ scopo:'Riempire la griglia con due simboli.', regole:['In ogni riga e in ogni colonna i due simboli sono in numero uguale (metà e metà).','Non ci possono essere tre simboli uguali di fila, né in orizzontale né in verticale.'],
   passi:[{ t:'Due 0 di fila: la casella dopo deve essere 1, altrimenti ci sarebbero tre 0 di fila.', f:function(){ return G(['00.1'],{cs:44,hi:{'0,2':Y}}); } },{ t:'Ecco perché lì va 1.', f:function(){ return G(['0011'],{cs:44,hi:{'0,2':V}}); } }], crea:RULES.sudoku.crea };
-function H(isl, br){ var cs=40, s='<svg viewBox="0 0 '+(4*cs)+' '+(4*cs)+'" class="rx" style="max-width:200px" xmlns="http://www.w3.org/2000/svg">', P=function(i){ return [isl[i][1]*cs+cs/2, isl[i][0]*cs+cs/2]; };
+function H(isl, br){ var cs=40, NM=['in alto a sinistra','in alto a destra','in basso a sinistra','in basso a destra'], al='Quattro isole: '+isl.map(function(p,i){ return (NM[i]||'isola')+' con il '+p[2]; }).join(', ')+'.'+(br.length?' Ponti: '+br.map(function(b){ return (b[2]===2?'due ponti':'un ponte')+' tra l’isola '+NM[b[0]]+' e quella '+NM[b[1]]; }).join('; ')+'.':' Ancora nessun ponte.'),
+  s='<svg viewBox="0 0 '+(4*cs)+' '+(4*cs)+'" class="rx" style="max-width:200px" xmlns="http://www.w3.org/2000/svg"'+altAttr(al)+'>', P=function(i){ return [isl[i][1]*cs+cs/2, isl[i][0]*cs+cs/2]; };
   // br: [a,b,quanti] con a,b indici di isole: 0-1 riga in alto, 0-2 colonna sinistra, 1-3 colonna destra, 2-3 riga in basso
   br.forEach(function(b){ var a=P(b[0]), c=P(b[1]), n=b[2], o=4, hz=a[1]===c[1]; for(var k=0;k<n;k++){ var d=n===2?(k?o:-o):0; s+='<line x1="'+(a[0]+(hz?0:d))+'" y1="'+(a[1]+(hz?d:0))+'" x2="'+(c[0]+(hz?0:d))+'" y2="'+(c[1]+(hz?d:0))+'" stroke="#1b2735" stroke-width="3"/>'; } });
   isl.forEach(function(p,i){ var q=P(i); s+='<circle cx="'+q[0]+'" cy="'+q[1]+'" r="15" fill="#fff" stroke="#1b2735" stroke-width="2.5"/>'+txt(q[0],q[1]+1,String(p[2]),17,{anchor:'middle',base:'central',weight:700}); }); return s+'</svg>'; }
-function LG(m){ var nm=['Anna','Bruno','Carla'], an=['gatto','cane','pesce'], cs=44, L=70, T=70, s='<svg viewBox="0 0 '+(L+3*cs+4)+' '+(T+3*cs+4)+'" class="rx" style="max-width:240px" xmlns="http://www.w3.org/2000/svg">';
+function LG(m){ var nm=['Anna','Bruno','Carla'], an=['gatto','cane','pesce'], cs=44, L=70, T=70, al=[]; Object.keys(m).forEach(function(k){ var a=k.split(','); al.push(nm[+a[0]]+'–'+an[+a[1]]+': '+(m[k]==='O'?'sì (cerchio)':'no (croce)')); });
+  var s='<svg viewBox="0 0 '+(L+3*cs+4)+' '+(T+3*cs+4)+'" class="rx" style="max-width:240px" xmlns="http://www.w3.org/2000/svg"'+altAttr('Tabella delle persone (Anna, Bruno, Carla) e degli animali (gatto, cane, pesce). '+(al.length?al.join('; ')+'.':'Ancora vuota.'))+'>';
   an.forEach(function(a,j){ s+='<text x="'+(L+j*cs+cs/2)+'" y="'+(T-8)+'" font-size="13" font-family="'+FONT+'" transform="rotate(-50 '+(L+j*cs+cs/2)+' '+(T-8)+')">'+a+'</text>'; });
   nm.forEach(function(n,i){ s+=txt(L-6,T+i*cs+cs/2+4,n,13,{anchor:'end'}); for(var j=0;j<3;j++){ var x=L+j*cs, y=T+i*cs, v=m[i+','+j]; s+='<rect x="'+x+'" y="'+y+'" width="'+cs+'" height="'+cs+'" fill="#fff" stroke="#1b2735"/>'; if(v==='X') s+='<path d="M'+(x+12)+' '+(y+12)+'l20 20M'+(x+32)+' '+(y+12)+'l-20 20" stroke="#b3261e" stroke-width="3"/>'; if(v==='O') s+='<circle cx="'+(x+cs/2)+'" cy="'+(y+cs/2)+'" r="12" fill="none" stroke="#1e7a3c" stroke-width="3"/>'; } });
   return s+'</svg>'; }
-function MJ(f, blocked){ var W=60, Hh=80, s='<svg viewBox="0 0 '+(3*W+20)+' '+(Hh+20)+'" class="rx" style="max-width:220px" xmlns="http://www.w3.org/2000/svg">';
+function MJ(f, blocked){ var W=60, Hh=80, s='<svg viewBox="0 0 '+(3*W+20)+' '+(Hh+20)+'" class="rx" style="max-width:220px" xmlns="http://www.w3.org/2000/svg"'+altAttr('Tessere del mahjong in fila: '+f.map(function(x,i){ return x?((blocked&&blocked[i])?'una tessera bloccata':'una tessera libera'):'posto vuoto'; }).join(', ')+'.')+'>';
   f.forEach(function(x,i){ if(!x) return; var X=10+i*W, Y0=6; s+='<rect x="'+(X-5)+'" y="'+(Y0+5)+'" width="'+W+'" height="'+Hh+'" rx="7" fill="#c9b48a" stroke="#6b5a3a"/><rect x="'+X+'" y="'+Y0+'" width="'+W+'" height="'+Hh+'" rx="7" fill="#fbf7ee" stroke="#6b5a3a" stroke-width="1.5"/>'+mjFace(x,X,Y0,W,Hh,false)+(blocked[i]?'<rect x="'+X+'" y="'+Y0+'" width="'+W+'" height="'+Hh+'" rx="7" fill="#1b2735" opacity=".28"/>':''); });
   return s+'</svg>'; }
 
@@ -9372,13 +9391,22 @@ var Rules={
   button:function(id){ return RULES[id] ? '<button class="btn rulesbtn" data-rules="'+id+'">? Come si gioca</button>' : ''; },
   open:function(id, tab){ var R=RULES[id]; if(!R) return; var old=document.getElementById('rules-dlg'); if(old) old.remove();
     var dlg=document.createElement('div'); dlg.id='rules-dlg'; dlg.className='rdlg'; dlg.setAttribute('role','dialog'); dlg.setAttribute('aria-modal','true'); dlg.setAttribute('aria-label','Come si gioca');
-    var step=0, cur=tab||'gioca';
+    var step=0, cur=tab||'gioca', tried={}, done=false;
+    // da un gioco di Crea alla partita di Gioca dello stesso gioco (per l'esercizio: «Ora gioca una partita»)
+    var gk={ labirinti:'labgioca', tangram:'tangioca' }[id]||id, play=(typeof GEN!=='undefined'&&GEN[gk])?'#p-'+gk+'-0':'';
     function body(){ if(cur==='gioca') return '<p class="rscope"><b>Lo scopo:</b> '+R.scopo+'</p><ol class="rlist">'+R.regole.map(function(x){ return '<li>'+x+'</li>'; }).join('')+'</ol>';
-      if(cur==='esempio'){ if(!R.passi.length) return '<p>Per questo gioco bastano le regole: prova direttamente!</p>'; var p=R.passi[step]; return '<div class="rstep"><div class="rpic">'+p.f()+'</div><p class="rtext">'+p.t+'</p><div class="row rnav"><button class="btn" data-nav="-1"'+(step?'':' disabled')+'>← Indietro</button><span>Passo '+(step+1)+' di '+R.passi.length+'</span><button class="btn primary" data-nav="1"'+(step<R.passi.length-1?'':' disabled')+'>Avanti →</button></div></div>'; }
+      if(cur==='esempio'){ if(!R.passi.length) return '<p>Per questo gioco bastano le regole: prova direttamente!</p>'; var p=R.passi[step], last=step===R.passi.length-1; return '<div class="rstep">'+(p.f?'<div class="rpic">'+p.f()+'</div>':'')+'<p class="rtext">'+p.t+'</p><div class="row rnav"><button class="btn" data-nav="-1"'+(step?'':' disabled')+'>← Indietro</button><span>Passo '+(step+1)+' di '+R.passi.length+'</span>'+(last&&R.es?'<button class="btn primary" data-tab="esercizio">Ora prova tu →</button>':'<button class="btn primary" data-nav="1"'+(!last?'':' disabled')+'>Avanti →</button>')+'</div></div>'; }
+      // l'esercizio: una domanda, tre risposte, la spiegazione; dopo due errori l'app mostra la risposta giusta
+      if(cur==='esercizio'){ var E=R.es; if(!E) return '<p>Per questo gioco l’esercizio è la prima partita: prova direttamente!</p>'; var nk=Object.keys(tried).length, show=done||nk>=2;
+        return '<div class="rstep">'+(E.f?'<div class="rpic">'+E.f()+'</div>':'')+'<p class="rtext"><b>'+E.t+'</b></p><div class="esopts">'+E.o.map(function(x,i){ var st=(done||show)&&i===E.a?' ok':tried[i]?' ko':''; return '<button class="btn esopt'+st+'" data-esa="'+i+'"'+(done||show||tried[i]?' disabled':'')+' aria-pressed="'+(!!tried[i]||(done&&i===E.a))+'">'+(st===' ok'?'✓ ':st===' ko'?'✗ ':'')+x+'</button>'; }).join('')+'</div>'+
+          '<div class="esout" aria-live="polite">'+(done?'<p class="esok"><b>Giusto!</b> '+E.w+'</p>':show?'<p class="esko"><b>La risposta giusta è «'+E.o[E.a]+'».</b> '+E.w+'</p>':nk?'<p class="esko">Non è questa: riprova.</p>':'')+'</div>'+
+          ((done||show)?'<div class="row">'+(show&&!done?'<button class="btn" data-esreset>Rifai l’esercizio</button>':'')+(play?'<a class="btn primary" href="'+play+'" data-close>Ora gioca una partita →</a>':'')+'</div>':'')+'</div>'; }
       return '<ol class="rlist">'+R.crea.map(function(x){ return '<li>'+x+'</li>'; }).join('')+'</ol>'; }
-    function draw(){ dlg.innerHTML='<div class="rbox"><div class="row" style="justify-content:space-between"><h2>Come si gioca</h2><button class="btn small" data-close aria-label="Chiudi">✕</button></div><div class="seg rtabs">'+[['gioca','Le regole'],['esempio','Esempio passo passo'],['crea','Come si crea']].map(function(t){ return '<button class="btn" data-tab="'+t[0]+'" aria-pressed="'+(cur===t[0])+'">'+t[1]+'</button>'; }).join('')+'</div><div class="rbody">'+body()+'</div>'+(canSpeak?'<div class="row"><button class="btn small" data-speak>'+I.speak+'Leggi ad alta voce</button></div>':'')+'</div>'; }
+    function draw(){ dlg.innerHTML='<div class="rbox"><div class="row" style="justify-content:space-between"><h2>Come si gioca</h2><button class="btn small" data-close aria-label="Chiudi">✕</button></div><div class="seg rtabs">'+[['gioca','Le regole'],['esempio','Esempio passo passo'],['esercizio','Esercizio'],['crea','Come si crea']].map(function(t){ return '<button class="btn" data-tab="'+t[0]+'" aria-pressed="'+(cur===t[0])+'">'+t[1]+'</button>'; }).join('')+'</div><div class="rbody">'+body()+'</div>'+(canSpeak?'<div class="row"><button class="btn small" data-speak>'+I.speak+'Leggi ad alta voce</button></div>':'')+'</div>'; }
     var opener=document.activeElement, close=ModalFocus.trap(dlg, opener);
-    dlg.addEventListener('click', function(e){ var b=e.target.closest('button'); if(e.target===dlg || (b && b.hasAttribute('data-close'))){ close(); return; } if(!b) return;
+    dlg.addEventListener('click', function(e){ if(e.target.closest('a[data-close]')){ close(); return; } var b=e.target.closest('button'); if(e.target===dlg || (b && b.hasAttribute('data-close'))){ close(); return; } if(!b) return;
+      if(b.dataset.esa!=null){ var i=+b.dataset.esa; if(i===R.es.a) done=true; else tried[i]=1; draw(); var o=dlg.querySelector('.esout'); if(o && o.firstChild) o.firstChild.setAttribute('tabindex','-1'); var f2=dlg.querySelector('.esopt:not([disabled])')||dlg.querySelector('[data-esreset]')||dlg.querySelector('a[data-close]'); if(f2) f2.focus(); return; }
+      if(b.hasAttribute('data-esreset')){ tried={}; done=false; draw(); var f3=dlg.querySelector('.esopt'); if(f3) f3.focus(); return; }
       if(b.dataset.tab){ cur=b.dataset.tab; step=0; draw(); var t=dlg.querySelector('[data-tab="'+cur+'"]'); if(t) t.focus(); } else if(b.dataset.nav){ step=Math.max(0,Math.min(R.passi.length-1, step+(+b.dataset.nav))); draw(); var nb=dlg.querySelector('[data-nav="'+b.dataset.nav+'"]:not([disabled])')||dlg.querySelector('[data-nav]:not([disabled])'); if(nb) nb.focus(); } else if(b.hasAttribute('data-speak')){ speak(dlg.querySelector('.rbody').innerText); } });
     draw(); document.body.appendChild(dlg); var f=dlg.querySelector('[data-tab]'); if(f) f.focus(); },
   // aggiunge il pulsante nell'intestazione di ogni gioco
@@ -9386,6 +9414,315 @@ var Rules={
     head.insertAdjacentHTML('beforeend', Rules.button(key)); head.querySelector('.rulesbtn').onclick=function(){ Rules.open(key); }; }
 };
 window.Rules=Rules; window.RulesG=G;
+})();
+
+/* ===================== ESEMPI PASSO PASSO ED ESERCIZI =====================
+   Per ogni gioco: un esempio completo, un passo alla volta (RULES[g].passi), e un esercizio per imparare a giocare
+   (RULES[g].es: una domanda con una figura, tre risposte possibili, una sola giusta, e la spiegazione).
+   Le figure sono disegni semplici in SVG; gli esempi già scritti in rules.js restano come sono. */
+(function(){
+var G=window.RulesG, Y='#ffe27a', B='#cfe8ff', V='#dff2e1', R='#ffd9d4', INK='#1b2735', FONTS="'Atkinson Hyperlegible',Arial,sans-serif";
+function T(x,y,s,size,o){ o=o||{}; return '<text x="'+x+'" y="'+y+'" font-size="'+size+'" font-family="'+(o.font||FONTS)+'" text-anchor="'+(o.anchor||'middle')+'" dominant-baseline="central" fill="'+(o.fill||INK)+'"'+(o.weight?' font-weight="'+o.weight+'"':'')+'>'+s+'</text>'; }
+// alt: la descrizione per i lettori di schermo (role="img" + aria-label)
+function svg(w,h,inner,max,alt){ return '<svg viewBox="0 0 '+w+' '+h+'" class="rx" style="max-width:'+(max||w)+'px" xmlns="http://www.w3.org/2000/svg"'+(alt?' role="img" aria-label="'+String(alt).replace(/"/g,'”').replace(/</g,'‹')+'"':' aria-hidden="true"')+'>'+inner+'</svg>'; }
+var ORD=['prima','seconda','terza','quarta','quinta','sesta','settima','ottava','nona','decima'];
+// una fila di caselle con un'etichetta ciascuna (per il percorso, le carte, le sequenze, le parole)
+function RW(labels, o){ o=o||{}; var cs=o.cs||52, gap=o.gap||0, h=o.h||cs, s='', n=labels.length;
+  labels.forEach(function(l,i){ var x=i*(cs+gap)+3; s+='<rect x="'+x+'" y="3" width="'+cs+'" height="'+h+'" rx="'+(o.round||4)+'" fill="'+((o.hi&&o.hi[i])||(l===null?'#5d6b7e':'#fff'))+'" stroke="'+INK+'" stroke-width="1.6"/>';
+    if(l!==null && l!==undefined) s+=T(x+cs/2, 3+h/2+(o.note&&o.note[i]?6:0), l, o.size||Math.min(cs*0.38, 20), { weight:700 });
+    else s+=T(x+cs/2, 3+h/2, '?', cs*0.4, { fill:'#fff', weight:700 });
+    if(o.note && o.note[i]) s+=T(x+cs/2, 15, o.note[i], 11, { fill:'#566273' }); });
+  // nel Morse i segni si leggono a parole: «punto», «linea»
+  var say=function(l){ return /[·—]/.test(l) ? l.replace(/·/g,' punto ').replace(/—/g,' linea ').replace(/\s+/g,' ').trim() : l; };
+  var alt=(o.what||'Caselle in fila')+': '+labels.map(function(l,i){ return (l===null?'coperta':l===''?'vuota':say(l))+(o.note&&o.note[i]?' ('+o.note[i]+')':'')+(o.hi&&o.hi[i]?' [evidenziata]':''); }).join(', ')+'.';
+  return svg(n*(cs+gap)-gap+6, h+6, s, o.max, alt); }
+// una scacchiera (o un suo pezzo) dalla posizione scritta come nel FEN: righe dall'alto, numeri = caselle vuote
+var GLY={ K:'♚', Q:'♛', R:'♜', B:'♝', N:'♞', P:'♟' };
+function CB(fen, o){ o=o||{}; var rows=fen.split('/'), n=rows.length, cs=o.cs||40, L=18, s='', files='abcdefgh';
+  rows.forEach(function(row, r){ var c=0; row.split('').forEach(function(ch){ if(/\d/.test(ch)){ for(var k=0;k<+ch;k++){ cell(r,c,''); c++; } } else { cell(r,c,ch); c++; } }); });
+  function cell(r,c,p){ var x=L+c*cs, y=r*cs, sq=files[c]+(n-r), dark=(r+c)%2===1;
+    s+='<rect x="'+x+'" y="'+y+'" width="'+cs+'" height="'+cs+'" fill="'+((o.hi&&o.hi[sq])||(dark?'#b58863':'#f0d9b5'))+'"/>';
+    if(o.dots && o.dots.indexOf(sq)>=0) s+='<circle cx="'+(x+cs/2)+'" cy="'+(y+cs/2)+'" r="'+(cs*0.15)+'" fill="#1f5fa8" opacity=".75"/>';
+    if(p){ var w=p===p.toUpperCase(); s+='<text x="'+(x+cs/2)+'" y="'+(y+cs*0.56)+'" font-size="'+(cs*0.82)+'" text-anchor="middle" dominant-baseline="central" fill="'+(w?'#ffffff':'#1b1b1b')+'" stroke="#1b1b1b" stroke-width="'+(w?1.4:0.5)+'" font-family="\'DejaVu Sans\',\'Segoe UI Symbol\',\'Noto Sans Symbols 2\',serif">'+GLY[p.toUpperCase()]+'</text>'; } }
+  for(var i=0;i<n;i++) s+=T(L/2, i*cs+cs/2, String(n-i), 11, { fill:'#566273' });
+  for(var j=0;j<8 && j<rows[0].replace(/\d/g,function(d){ return new Array(+d+1).join('x'); }).length;j++) s+=T(L+j*cs+cs/2, n*cs+9, files[j], 11, { fill:'#566273' });
+  s+='<rect x="'+L+'" y="0" width="'+(8*cs)+'" height="'+(n*cs)+'" fill="none" stroke="'+INK+'" stroke-width="2"/>';
+  var NMP={K:'re',Q:'donna',R:'torre',B:'alfiere',N:'cavallo',P:'pedone'}, pcs=[];
+  rows.forEach(function(row, r){ var c=0; row.split('').forEach(function(ch){ if(/\d/.test(ch)) c+=+ch; else { pcs.push(NMP[ch.toUpperCase()]+' '+(ch===ch.toUpperCase()?'bianco':'nero').replace(/o$/, ch.toUpperCase()==='Q'||ch.toUpperCase()==='R'?'a':'o')+' in '+files[c]+(n-r)); c++; } }); });
+  var alt='Scacchiera. '+(pcs.length?'Pezzi: '+pcs.join(', ')+'.':'Nessun pezzo.')+(o.dots?' Caselle segnate con un punto: '+o.dots.join(', ')+'.':'')+(o.hi?' Caselle evidenziate: '+Object.keys(o.hi).join(', ')+'.':'');
+  return svg(L+8*cs+2, n*cs+18, s, o.max||340, alt); }
+// la dama: una scacchiera n×n con pedine bianche (w), nere (b), dame (W, B) e un percorso di presa
+function DB(n, pcs, o){ o=o||{}; var cs=44, s='';
+  for(var r=0;r<n;r++) for(var c=0;c<n;c++) s+='<rect x="'+(c*cs)+'" y="'+(r*cs)+'" width="'+cs+'" height="'+cs+'" fill="'+((o.hi&&o.hi[r+','+c])||((r+c)%2?'#8a6d4b':'#f3e6cf'))+'"/>';
+  if(o.path){ var pts=o.path.map(function(p){ return (p[1]*cs+cs/2)+','+(p[0]*cs+cs/2); }).join(' '); s+='<polyline points="'+pts+'" fill="none" stroke="#e8a317" stroke-width="5" stroke-dasharray="8 5" stroke-linecap="round"/>'; }
+  Object.keys(pcs).forEach(function(k){ var p=pcs[k], rc=k.split(','), x=+rc[1]*cs+cs/2, y=+rc[0]*cs+cs/2, w=p.toLowerCase()==='w';
+    s+='<circle cx="'+x+'" cy="'+y+'" r="'+(cs*0.38)+'" fill="'+(w?'#fbfbf7':'#26292e')+'" stroke="#111" stroke-width="2"/>';
+    if(p===p.toUpperCase()) s+='<circle cx="'+x+'" cy="'+y+'" r="'+(cs*0.22)+'" fill="none" stroke="'+(w?'#26292e':'#fbfbf7')+'" stroke-width="2.5"/>'; });
+  s+='<rect x="0" y="0" width="'+(n*cs)+'" height="'+(n*cs)+'" fill="none" stroke="#111" stroke-width="2"/>';
+  var where=function(rc){ return (ORD[rc[0]]||'riga '+(rc[0]+1))+' riga dall’alto, '+(ORD[rc[1]]||'colonna '+(rc[1]+1))+' colonna'; };
+  var alt='Dama, scacchiera '+n+'×'+n+'. '+Object.keys(pcs).map(function(k){ var p=pcs[k], w=p.toLowerCase()==='w'; return (p===p.toUpperCase()?'dama ':'pedina ')+(w?'bianca':'nera')+' in '+where(k.split(',').map(Number)); }).join('; ')+'.'+(o.path?' Percorso della presa: '+o.path.map(where).join(' → ')+'.':'')+(o.hi?' Caselle dove può andare: '+Object.keys(o.hi).map(function(k){ return where(k.split(',').map(Number)); }).join('; ')+'.':'');
+  return svg(n*cs, n*cs, s, 280, alt); }
+// carte del memory e oggetti del gioco di Kim: null = carta coperta
+function CARDS(items, o){ o=o||{}; return RW(items, { cs:o.cs||78, h:o.h||58, gap:10, round:10, size:15, hi:o.hi, note:o.note, max:o.max, what:'Carte, da sinistra a destra' }); }
+// il tangram nel quadrato: i sette pezzi, colorati
+function TAN(){ var k=40, P=[['#e05a47','0,0 4,0 2,2'],['#f2a541','0,0 0,4 2,2'],['#4f9d69','4,2 4,4 2,4'],['#3d7cc9','3,1 4,0 4,2'],['#8e6cc0','2,2 3,3 1,3'],['#d6c64a','2,2 3,1 4,2 3,3'],['#58b4c4','0,4 1,3 3,3 2,4']], s='';
+  P.forEach(function(p){ s+='<polygon points="'+p[1].split(' ').map(function(xy){ var a=xy.split(','); return (a[0]*k+4)+','+(a[1]*k+4); }).join(' ')+'" fill="'+p[0]+'" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>'; });
+  return svg(4*k+8, 4*k+8, s, 180, 'Il tangram: sette pezzi colorati che formano un quadrato (due triangoli grandi, uno medio, due piccoli, un quadrato e un parallelogramma).'); }
+// pentamini: lettere nella griglia, colore per lettera
+var PC={ L:'#f2a541', P:'#3d7cc9', V:'#4f9d69', I:'#e05a47', U:'#8e6cc0' };
+function PEN(rows){ var hi={}; rows.forEach(function(r,i){ r.split('').forEach(function(ch,j){ if(PC[ch]) hi[i+','+j]=PC[ch]; }); }); return G(rows, { hi:hi, altHi:false, cs:40, label:'Rettangolo di '+rows.length+' righe e '+rows[0].length+' colonne; ogni lettera è il pentamino che copre la casella' }); }
+// mandala: un cerchio con n spicchi; un segno (cerchietto) ripetuto, e con lo specchio anche riflesso
+function MAND(n, sel, mirror){ var cx=110, cy=110, R0=100, s='<circle cx="'+cx+'" cy="'+cy+'" r="'+R0+'" fill="#fff" stroke="'+INK+'" stroke-width="2"/>';
+  for(var i=0;i<n;i++){ var a=2*Math.PI*i/n-Math.PI/2; s+='<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+R0*Math.cos(a))+'" y2="'+(cy+R0*Math.sin(a))+'" stroke="#c9d2de" stroke-width="1.5"/>'; }
+  var off=Math.PI/n*0.55, reps=sel==='one'?1:n;
+  for(var j=0;j<reps;j++){ [1].concat(mirror?[-1]:[]).forEach(function(sg){ var a=2*Math.PI*j/n-Math.PI/2+Math.PI/n+sg*off*(mirror?0.5:0); s+='<circle cx="'+(cx+62*Math.cos(a))+'" cy="'+(cy+62*Math.sin(a))+'" r="9" fill="'+(j===0?'#e05a47':'#3d7cc9')+'"/>'; }); }
+  return svg(220, 220, s, 200, 'Mandala diviso in '+n+' spicchi, '+(sel==='one'?'con un cerchietto in uno spicchio solo.':'con un cerchietto ripetuto in ogni spicchio'+(mirror?' e riflesso a metà spicchio: '+(2*n)+' cerchietti.':': '+n+' cerchietti.'))); }
+// la ruota di lettere
+function WHEEL(letters){ var cx=80, cy=80, s='<circle cx="80" cy="80" r="74" fill="#fff" stroke="'+INK+'" stroke-width="2"/>';
+  letters.split('').forEach(function(l,i){ var a=2*Math.PI*i/letters.length-Math.PI/2; s+='<circle cx="'+(cx+48*Math.cos(a))+'" cy="'+(cy+48*Math.sin(a))+'" r="19" fill="'+B+'" stroke="'+INK+'"/>'+T(cx+48*Math.cos(a), cy+48*Math.sin(a)+1, l, 20, { weight:700 }); });
+  return svg(160, 160, s, 160, 'Ruota con le lettere: '+letters.split('').join(', ')+'.'); }
+// unisci i puntini: una casetta
+function DOTS(upto, star){ var P=[[30,150],[130,150],[130,80],[80,30],[30,80]], L=[[16,150],[144,150],[144,80],[80,16],[16,80]], s='';
+  if(upto>1){ var pts=P.slice(0,upto).map(function(p){ return p.join(','); }); if(upto>5) pts.push(P[0].join(',')); s+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#1f5fa8" stroke-width="3"/>'; }
+  P.forEach(function(p,i){ s+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="5" fill="'+INK+'"/>'+T(L[i][0], L[i][1], String(i+1), 14, { weight:700 }); });
+  if(star){ var D=[[62,150],[62,108],[98,108],[98,150]], DL=[[62,166,'6★'],[52,98,'7'],[108,98,'8'],[98,166,'9']];
+    s+='<polyline points="'+D.map(function(p){ return p.join(','); }).join(' ')+'" fill="none" stroke="#e8a317" stroke-width="3"/>';
+    D.forEach(function(p,i){ s+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="5" fill="'+INK+'"/>'+T(DL[i][0], DL[i][1], DL[i][2], 13, { weight:700 }); }); }
+  return svg(170, 178, s, 180, 'Punti numerati da 1 a 5 che formano una casetta'+(upto>1?': la linea unisce i punti da 1 a '+Math.min(upto,5)+(upto>5?' e torna all’1':''):'')+'.'+(star?' Dentro, la porta: punti da 6 a 9, il 6 con la stellina.':'')); }
+// linee libere: le fasi
+function LINES(st){ var s='<rect x="2" y="2" width="216" height="156" rx="6" fill="#fff" stroke="'+INK+'" stroke-width="1.5"/>';
+  if(st>=3) s+='<path d="M95 62 C 110 70, 112 88, 104 100 C 96 88, 88 74, 95 62Z" fill="#f2a541" opacity=".85"/><path d="M60 110 C 80 104, 92 112, 96 126 C 78 130, 64 124, 60 110Z" fill="#8e6cc0" opacity=".8"/>';
+  s+='<path d="M0 40 C 60 20, 120 120, 220 90" fill="none" stroke="'+INK+'" stroke-width="'+(st>=4?4:2.5)+'"/><path d="M30 160 C 60 90, 140 40, 170 0" fill="none" stroke="'+INK+'" stroke-width="'+(st>=4?4:2.5)+'"/><path d="M0 120 C 70 140, 150 120, 220 140" fill="none" stroke="'+INK+'" stroke-width="'+(st>=4?4:2.5)+'"/>';
+  if(st===1) s+='<circle cx="98" cy="70" r="14" fill="none" stroke="#e05a47" stroke-width="3" stroke-dasharray="4 3"/>';
+  if(st>=2) s+='<path d="M86 66 Q 98 82 112 72" fill="none" stroke="#3d7cc9" stroke-width="'+(st>=4?4:3)+'"/>';
+  return svg(220, 160, s, 240, ['','Linee curve che attraversano il foglio; un incrocio appuntito è cerchiato.','Le stesse linee: l’incrocio è stato arrotondato con una curva.','Linee curve con incroci arrotondati e due zone colorate.','Il disegno finito: linee rinforzate, incroci arrotondati, zone colorate.'][st]); }
+// trova le differenze: due scenette semplici
+function SCENE(sun, tree, birds, house){ var s='<rect x="0" y="0" width="150" height="110" fill="#eef6ff" stroke="'+INK+'" stroke-width="1.5"/><rect x="0" y="90" width="150" height="20" fill="#cfe8c4"/>';
+  if(sun) s+='<circle cx="125" cy="22" r="12" fill="#f2c230"/>';
+  s+='<rect x="18" y="55" width="40" height="35" fill="'+(house||'#e05a47')+'"/><polygon points="14,56 38,36 62,56" fill="#7a4b2a"/>';
+  if(tree) s+='<rect x="98" y="62" width="7" height="28" fill="#7a4b2a"/><circle cx="101" cy="56" r="'+tree+'" fill="#4f9d69"/>';
+  for(var i=0;i<birds;i++) s+='<path d="M'+(70+i*16)+' 24 q5 -6 10 0 q5 -6 10 0" fill="none" stroke="'+INK+'" stroke-width="1.8"/>';
+  return s; }
+function DIFF(mark){ var l=SCENE(true,16,2), r=SCENE(false,16,2,'#3d7cc9');
+  return svg(316, 112, '<g>'+l+'</g><g transform="translate(166 0)">'+r+(mark?'<circle cx="125" cy="22" r="17" fill="none" stroke="#e8a317" stroke-width="3"/><circle cx="38" cy="72" r="26" fill="none" stroke="#e8a317" stroke-width="3"/>':'')+'</g>', 340, 'Due scene. A sinistra: una casa rossa, un albero, due uccellini e il sole. A destra: la casa è blu e il sole non c’è'+(mark?'; le due differenze sono cerchiate.':'.')); }
+function DIFF2(){ var l=SCENE(true,16,3), r=SCENE(true,11,2); return svg(316, 112, '<g>'+l+'</g><g transform="translate(166 0)">'+r+'</g>', 340, 'Due scene con una casa rossa, un albero e il sole. A sinistra ci sono tre uccellini e una chioma grande; a destra due uccellini e una chioma più piccola.'); }
+// quadrati spezzati: un quadrato tagliato in pezzi
+function SQ(parts){ var s='', C=['#e05a47','#f2a541','#4f9d69','#3d7cc9'], P=['0,0 100,0 0,100','100,0 100,100 50,50','0,100 50,50 100,100'];
+  P.forEach(function(p,i){ if(parts.indexOf(i)<0) return; s+='<polygon points="'+p.split(' ').map(function(xy){ var a=xy.split(','); return (+a[0]+6)+','+(+a[1]+6); }).join(' ')+'" fill="'+C[i]+'" stroke="#fff" stroke-width="3"/>'; });
+  s+='<rect x="6" y="6" width="100" height="100" fill="none" stroke="'+INK+'" stroke-width="1.5" stroke-dasharray="4 3"/>';
+  return svg(112, 112, s, 140, parts.length===3?'Un quadrato completo, fatto di tre pezzi triangolari.':'Un quadrato incompleto: c’è solo un pezzo, ne mancano '+(3-parts.length)+'.'); }
+// labirinto a blocchi: '#' muro, '.' corridoio, E entrata, U uscita; hi = celle colorate
+function MZ(rows, hi){ return G(rows, { cs:30, hi:hi, dark:'#3a4656', label:'Labirinto: E è l’entrata, U l’uscita' }); }
+// futoshiki: tre caselle con il segno > tra la prima e la seconda
+function FUT(){ var s='', cs=52; [0,1,2].forEach(function(i){ var x=3+i*(cs+26); s+='<rect x="'+x+'" y="3" width="'+cs+'" height="'+cs+'" fill="'+(i===0?Y:'#fff')+'" stroke="'+INK+'" stroke-width="2"/>'; if(i===2) s+=T(x+cs/2, 3+cs/2, '3', 26, { weight:700 }); });
+  s+=T(3+cs+13, 3+cs/2, '>', 22, { weight:700 }); return svg(3*cs+2*26+6, cs+6, s, 240, 'Tre caselle in fila: la prima, evidenziata, è vuota; tra la prima e la seconda c’è il segno maggiore; la seconda è vuota; nella terza c’è il 3.'); }
+function cells(list, col){ var o={}; list.forEach(function(k){ o[k]=col; }); return o; }
+
+var EX={
+ percorso:{ passi:[
+   { t:'Il percorso: caselle numerate dalla Partenza all’Arrivo. Alcune sono speciali: +2 (vai avanti di 2), −2 (torna indietro di 2), «fermo» (stai fermo un giro), ★ (decidete voi che cosa fare).', f:function(){ return RW(['1','2','3','4','5','6','7','8','9','10'],{ cs:40, note:{4:'fermo',6:'+2',8:'−2'} }); } },
+   { t:'Anna è sulla casella 3 e tira il dado: esce 4. Conta ad alta voce, una casella per numero: 4, 5, 6, 7.', f:function(){ return RW(['1','2','3','4','5','6','7','8','9','10'],{ cs:40, note:{4:'fermo',6:'+2',8:'−2'}, hi:{2:Y,3:V,4:V,5:V,6:V} }); } },
+   { t:'La casella 7 dice +2: Anna va avanti di altre due caselle e arriva alla 9.', f:function(){ return RW(['1','2','3','4','5','6','7','8','9','10'],{ cs:40, note:{4:'fermo',6:'+2',8:'−2'}, hi:{6:B,7:V,8:Y} }); } },
+   { t:'Ora tocca a chi viene dopo. Vince chi arriva per primo all’Arrivo.', f:null } ],
+   es:{ t:'Sei sulla casella 6 e tiri il dado: esce 3. La casella 9 dice −2 (torna indietro di 2). Dove finisci?', f:function(){ return RW(['5','6','7','8','9','10'],{ cs:44, note:{4:'−2'}, hi:{1:Y} }); }, o:['Sulla 9','Sulla 7','Sulla 11'], a:1, w:'Dal 6 conti tre caselle: 7, 8, 9. La 9 dice −2: torni indietro di due, sulla 7.' } },
+ dama:{ passi:[
+   { t:'Le pedine stanno sulle caselle scure e si muovono di una casella in diagonale, in avanti. Il bianco sale verso l’alto.', f:function(){ return DB(6,{ '4,1':'w', '1,2':'b' },{ hi:{ '3,0':V, '3,2':V } }); } },
+   { t:'Si mangia saltando una pedina avversaria vicina, in diagonale, se la casella subito dietro è libera. La pedina mangiata si toglie.', f:function(){ return DB(6,{ '4,1':'w', '3,2':'b' },{ path:[[4,1],[2,3]] }); } },
+   { t:'Dopo una presa, se si può, si continua a saltare nella stessa mossa: qui il bianco mangia due pedine. Mangiare è obbligatorio.', f:function(){ return DB(6,{ '4,1':'w', '3,2':'b', '1,2':'b' },{ path:[[4,1],[2,3],[0,1]] }); } },
+   { t:'Una pedina che arriva sull’ultima fila diventa dama (qui il cerchio all’interno): si muove e mangia anche all’indietro.', f:function(){ return DB(6,{ '0,1':'W' },{ hi:{ '1,0':V, '1,2':V } }); } } ],
+   es:{ t:'Tocca al bianco. Quante pedine nere mangia la pedina bianca in questa mossa?', f:function(){ return DB(6,{ '4,1':'w', '3,2':'b', '1,4':'b' }); }, o:['Una','Due','Nessuna'], a:1, w:'Salta la prima pedina nera (casella dietro libera), poi dalla nuova casella può saltare anche la seconda. Mangiare è obbligatorio, e si continua finché si può: due pedine.' } },
+ labirinti:{ passi:[
+   { t:'Si entra dall’entrata (E) e si cerca l’uscita (U). I blocchi scuri sono muri: non si attraversano.', f:function(){ return MZ(['#######','E..#..#','#.##.##','#....##','###.###','#.....U','#######']); } },
+   { t:'Si segue un corridoio. A un bivio si sceglie una strada e si tiene a mente dove si è passati.', f:function(){ return MZ(['#######','E..#..#','#.##.##','#....##','###.###','#.....U','#######'], cells(['1,1','2,1','3,1','3,2','3,3'],Y)); } },
+   { t:'Questa strada finisce contro un muro: è un vicolo cieco. Si torna all’ultimo bivio e si prova un’altra via.', f:function(){ return MZ(['#######','E..#..#','#.##.##','#....##','###.###','#.....U','#######'], Object.assign(cells(['1,1','2,1','3,1','3,2','3,3'],Y), cells(['3,4','2,4','1,4','1,5'],R))); } },
+   { t:'Eccola: la strada giusta arriva all’uscita.', f:function(){ return MZ(['#######','E..#..#','#.##.##','#....##','###.###','#.....U','#######'], cells(['1,1','2,1','3,1','3,2','3,3','4,3','5,3','5,4','5,5','5,6'],V)); } } ],
+   es:{ t:'Arrivi a un bivio, scegli una strada e finisci contro un muro. Che cosa fai?', f:null, o:['Torno all’ultimo bivio e provo un’altra strada','Ricomincio tutto dall’entrata','Passo attraverso il muro'], a:0, w:'Un vicolo cieco non è un errore: dice solo che quella strada non va. Si torna all’ultimo bivio e si prova la via che non si è ancora fatta.' } },
+ schema:{ passi:[
+   { t:'Ogni numero dello schema ha una definizione. 1 orizzontale (4 lettere): «Grande distesa d’acqua salata». 1 verticale (4 lettere): «Ha cinque dita».', f:function(){ return G(['....','.###','.###','.###'],{ note:{'0,0':'1'} }); } },
+   { t:'L’1 orizzontale è MARE. Lo scriviamo.', f:function(){ return G(['MARE','.###','.###','.###'],{ note:{'0,0':'1'}, hi:{'0,0':Y,'0,1':Y,'0,2':Y,'0,3':Y} }); } },
+   { t:'La M di MARE è anche la prima lettera dell’1 verticale: M _ _ _, ha cinque dita… è MANO.', f:function(){ return G(['MARE','A###','N###','O###'],{ note:{'0,0':'1'}, hi:{'0,0':V,'1,0':V,'2,0':V,'3,0':V} }); } },
+   { t:'Si continua così: ogni parola trovata regala lettere alle parole che incrocia.', f:null } ],
+   es:{ t:'Definizione: «Bianco, si beve a colazione» (5 lettere). Dallo schema sai già che la seconda lettera è A. Quale parola è?', f:function(){ return G(['.A...']); }, o:['PASTA','LATTE','TORTA'], a:1, w:'LATTE ha cinque lettere, la A al secondo posto e corrisponde alla definizione. PASTA ha la A al posto giusto, ma non si beve; TORTA non ha la A al secondo posto.' } },
+ memory:{ passi:[
+   { t:'Le carte sono coperte. Al tuo turno ne giri due.', f:function(){ return CARDS([null,null,null,null,null,null]); } },
+   { t:'Escono SOLE e LUNA: sono diverse, quindi si rigirano. Ma ricorda dove sono!', f:function(){ return CARDS(['SOLE',null,null,'LUNA',null,null],{ hi:{0:Y,3:Y} }); } },
+   { t:'Al turno dopo giri una carta nuova: è un’altra LUNA. Ti ricordi dov’era la prima? Era la quarta: la giri ed è una coppia.', f:function(){ return CARDS([null,null,null,'LUNA',null,'LUNA'],{ hi:{3:V,5:V} }); } },
+   { t:'Le coppie trovate restano scoperte. Si vince scoprendo tutte le coppie; giocando a turno, chi trova una coppia gioca ancora.', f:null } ],
+   es:{ t:'Prima hai visto MELA nella carta 2 e PERA nella carta 5. Ora giri la carta 3 ed esce PERA. Quale carta giri adesso?', f:function(){ return CARDS(['1','2','PERA','4','5','6'],{ hi:{2:Y}, note:{1:'MELA?',4:'PERA?'} }); }, o:['La carta 2','La carta 5','La carta 6'], a:1, w:'La PERA vista prima era nella carta 5: girandola fai coppia. La carta 2 era una MELA.' } },
+ spezzati:{ passi:[
+   { t:'Ogni persona del gruppo deve avere davanti un quadrato completo, tutti della stessa grandezza. All’inizio ognuno ha una busta con alcuni pezzi.', f:function(){ return SQ([0,1,2]); } },
+   { t:'I pezzi giusti sono sparsi tra le buste. Qui mancano due pezzi per finire il quadrato.', f:function(){ return SQ([0]); } },
+   { t:'Non si parla, non si fanno segni e non si prende niente: si possono solo dare pezzi agli altri. Bisogna guardare di che cosa hanno bisogno.', f:null },
+   { t:'Il gioco finisce quando tutti hanno un quadrato. Poi si parla di com’è andata: che cosa ha aiutato, che cosa no.', f:null } ],
+   es:{ t:'Il tuo quadrato è quasi finito, ma vedi che una persona vicina ha bisogno proprio di un pezzo che hai tu. Che cosa fai?', f:null, o:['Tengo il pezzo: il mio quadrato è quasi pronto','Le dico a voce quale pezzo le serve','Glielo do: conta che tutti finiscano'], a:2, w:'Il gioco si vince solo se tutti hanno un quadrato: a volte bisogna smontare il proprio per aiutare gli altri. Parlare non è permesso.' } },
+ consenso:{ passi:[
+   { t:'Ognuno, da solo, mette in ordine gli elementi della lista (per esempio: che cosa è più utile su un’isola deserta).', f:null },
+   { t:'Poi il gruppo discute e deve trovare un solo ordine comune. Non si vota e non si fa la media.', f:null },
+   { t:'Si ascoltano le ragioni di tutti. Si cambia idea solo se si è convinti, non per finire prima.', f:null },
+   { t:'Alla fine si confrontano le scelte personali con quella del gruppo e si parla di come si è deciso.', f:null } ],
+   es:{ t:'Il gruppo non si mette d’accordo sul terzo posto. Che cosa si fa?', f:null, o:['Si vota a maggioranza','Si fa la media delle posizioni','Si ascoltano le ragioni e si cerca un ordine che tutti accettano'], a:2, w:'Il consenso non è un voto né una media: è una scelta che tutti possono accettare, dopo aver ascoltato le ragioni di ognuno.' } },
+ profilo:{ passi:[
+   { t:'Ognuno riceve una scheda con alcune informazioni sulle tre possibilità. Sono tutte vere, ma ognuno ne ha solo una parte.', f:null },
+   { t:'Prima, da soli, si legge la scheda e si scrive la propria scelta.', f:null },
+   { t:'Poi il gruppo discute: solo mettendo insieme le informazioni di tutti si trova la scelta migliore. La scheda non si mostra, ma si può leggere ad alta voce.', f:null },
+   { t:'Alla fine chi conduce rivela la soluzione e si parla di com’è andata.', f:null } ],
+   es:{ t:'La tua scheda dice che la possibilità B costa meno delle altre. Che cosa fai durante la discussione?', f:null, o:['Lo tengo per me','Lo dico al gruppo: ognuno ha pezzi diversi','Mostro la scheda a tutti'], a:1, w:'Ognuno ha informazioni che gli altri non hanno: la scelta migliore viene fuori solo se tutti le condividono. La scheda però non si mostra: si legge o si racconta.' } },
+ kim:{ passi:[
+   { t:'Guarda bene gli oggetti per il tempo indicato.', f:function(){ return CARDS(['CHIAVE','MELA','LIBRO','TAZZA'],{ cs:84 }); } },
+   { t:'Gli oggetti si nascondono e poi ricompaiono, ma uno manca.', f:function(){ return CARDS(['MELA','TAZZA','CHIAVE'],{ cs:84 }); } },
+   { t:'Che cosa manca? Il LIBRO. Nell’elenco in basso si tocca LIBRO e si conferma.', f:function(){ return CARDS(['LIBRO'],{ cs:84, hi:{0:V} }); } },
+   { t:'Un trucco: mentre guardi, dì i nomi ad alta voce o inventa una piccola storia che li unisca.', f:null } ],
+   es:{ t:'Prima c’erano: MATITA, SOLE, CHIAVE, TAZZA, MELA. Dopo restano: MELA, TAZZA, MATITA, CHIAVE. Che cosa manca?', f:null, o:['La CHIAVE','Il SOLE','La TAZZA'], a:1, w:'Gli oggetti rimasti hanno cambiato ordine, ma ci sono tutti tranne il SOLE.' } },
+ cifrari:{ passi:[
+   { t:'Il messaggio è cifrato con il cifrario di Cesare, spostamento 3: per cifrare, ogni lettera diventa quella tre posti più avanti (A→D, B→E…).', f:function(){ return G(['FLDR']); } },
+   { t:'Per decifrare si fa il contrario: si torna indietro di tre posti. F torna a C.', f:function(){ return G(['FLDR','C...'],{ hi:{'1,0':Y} }); } },
+   { t:'L torna a I, D torna ad A, R torna a O.', f:function(){ return G(['FLDR','CIAO'],{ hi:{'1,1':Y,'1,2':Y,'1,3':Y} }); } },
+   { t:'Il messaggio è CIAO. Nei cifrari a sostituzione la stessa lettera cifrata è sempre la stessa lettera in chiaro: scoperta una, si scrivono tutte quelle uguali.', f:null } ],
+   es:{ t:'Cifrario di Cesare con spostamento 3. Il messaggio cifrato è VROH. Che parola è?', f:function(){ return G(['VROH']); }, o:['MARE','SOLE','LUNA'], a:1, w:'Si torna indietro di tre posti: V→S, R→O, O→L, H→E. La parola è SOLE.' } },
+ morse:{ passi:[
+   { t:'Nel codice Morse ogni lettera è un gruppo di punti (segnali brevi) e linee (segnali lunghi).', f:function(){ return RW(['S  · · ·','O  — — —'],{ cs:150, size:18 }); } },
+   { t:'Il messaggio «· · ·  — — —  · · ·» ha tre gruppi. Il primo è · · ·: nella tabella è la S.', f:function(){ return RW(['· · ·','— — —','· · ·'],{ cs:90, size:18, hi:{0:Y} }); } },
+   { t:'Il secondo, — — —, è la O; il terzo di nuovo la S. Il messaggio è SOS, il segnale di soccorso.', f:function(){ return RW(['S','O','S'],{ cs:90, hi:{0:V,1:V,2:V} }); } },
+   { t:'Con Ascolta lo senti, con Luce lo vedi lampeggiare. Toccando una casella ascolti solo quella lettera.', f:null } ],
+   es:{ t:'Che parola è «— —   · —   · — ·   ·»? Tabella: M = — —, A = · —, R = · — ·, E = ·, G = — — ·, U = · · —, O = — — —.', f:function(){ return RW(['— —','· —','· — ·','·'],{ cs:80, size:18 }); }, o:['MAGO','MARE','MURO'], a:1, w:'— — è M, · — è A, · — · è R, · è E: MARE.' } },
+ avventura:{ passi:[
+   { t:'Scegli il personaggio. L’esploratrice ha Forza 2, Astuzia 1, Cuore 1 e una corda robusta.', f:function(){ return RW(['Forza 2','Astuzia 1','Cuore 1'],{ cs:110, size:16 }); } },
+   { t:'Scena: il ponte levatoio è alzato. Scegli come affrontarla: con la Forza («tiri la catena») serve 5.', f:null },
+   { t:'Tiri il dado: esce 4. Dado + Forza = 4 + 2 = 6. È almeno 5: ce l’hai fatta, e la storia va avanti.', f:function(){ return RW(['dado 4','+ Forza 2','= 6 ≥ 5'],{ cs:110, size:16, hi:{2:V} }); } },
+   { t:'Se il totale fosse stato più basso, avresti perso un cuore di Energia: la storia va avanti lo stesso. Si vince arrivando al finale con almeno un cuore.', f:null } ],
+   es:{ t:'Il tuo personaggio ha Astuzia 1. La prova con l’Astuzia chiede 5. Quale numero deve uscire almeno sul dado?', f:null, o:['3','4','5'], a:1, w:'Dado + Astuzia deve arrivare almeno a 5: con Astuzia 1 serve almeno 4 (4 + 1 = 5).' } },
+ lista:{ passi:[
+   { t:'Premi Inizia e leggi la lista: CANE, ROSA, TRENO, GATTO, TULIPANO, BICI.', f:function(){ return CARDS(['CANE','ROSA','TRENO','GATTO','TULIPANO','BICI'],{ cs:96, h:46 }); } },
+   { t:'Un trucco: raggruppa le parole per tipo. Animali: CANE, GATTO. Fiori: ROSA, TULIPANO. Mezzi: TRENO, BICI.', f:function(){ return CARDS(['CANE','GATTO','ROSA','TULIPANO','TRENO','BICI'],{ cs:96, h:46, hi:{0:Y,1:Y,2:B,3:B,4:V,5:V} }); } },
+   { t:'Dopo la pausa compaiono le parole della lista in mezzo ad altre: tocca solo quelle che avevi letto (qui GATTO e TRENO, non PERA e NAVE) e premi Conferma.', f:function(){ return CARDS(['PERA','GATTO','NAVE','TRENO'],{ cs:96, h:46, hi:{1:V,3:V} }); } } ],
+   es:{ t:'Lista: SEDIA, MELA, TAVOLO, PERA, LETTO, UVA. Qual è il modo più semplice per ricordarla?', f:null, o:['In ordine alfabetico','Divisa in due gruppi: mobili e frutta','Contando le lettere di ogni parola'], a:1, w:'Raggruppare per tipo aiuta: tre mobili (SEDIA, TAVOLO, LETTO) e tre frutti (MELA, PERA, UVA). Due gruppi da tre si ricordano meglio di sei parole sparse.' } },
+ sequenze:{ passi:[
+   { t:'Premi Inizia: i pulsanti si accendono uno alla volta. Qui: ROSSO, poi BLU.', f:function(){ return RW(['ROSSO','BLU','VERDE','GIALLO'],{ cs:80, size:14, hi:{0:'#f6b4aa'} }); } },
+   { t:'Quando tocca a te, li tocchi nello stesso ordine: ROSSO, BLU.', f:function(){ return RW(['1. ROSSO','2. BLU'],{ cs:110, size:15, hi:{0:V,1:V} }); } },
+   { t:'Se riesci, la sequenza si allunga di uno: ROSSO, BLU, VERDE. Un aiuto: ripeti i colori sottovoce mentre si accendono.', f:function(){ return RW(['ROSSO','BLU','VERDE'],{ cs:90, size:14, hi:{2:Y} }); } } ],
+   es:{ t:'Si sono accesi, in ordine: GIALLO, BLU, GIALLO, ROSSO. Qual è il terzo pulsante da toccare?', f:null, o:['BLU','GIALLO','ROSSO'], a:1, w:'L’ordine è GIALLO (1), BLU (2), GIALLO (3), ROSSO (4): il terzo è di nuovo GIALLO.' } },
+ corsi:{ passi:[
+   { t:'Nove blocchi sono sparsi sul foglio. Alcuni si accendono, uno alla volta: qui il 3, poi il 7, poi il 5.', f:function(){ return RW(['1','2','3','4','5','6','7','8','9'],{ cs:40, hi:{2:Y,6:Y,4:Y}, note:{2:'1°',6:'2°',4:'3°'} }); } },
+   { t:'Quando tocca a te, li tocchi nello stesso ordine: 3, 7, 5. Aiuta immaginare il percorso come una linea che li unisce.', f:null },
+   { t:'Nel livello Esperto vanno toccati all’indietro: 5, 7, 3.', f:function(){ return RW(['5','7','3'],{ cs:60, hi:{0:V,1:V,2:V} }); } } ],
+   es:{ t:'Livello Esperto: si sono accesi i blocchi 2, 8, 4. Quale tocchi per primo?', f:null, o:['Il 2','L’8','Il 4'], a:2, w:'All’indietro si parte dall’ultimo acceso: 4, poi 8, poi 2.' } },
+ incastro:{ passi:[
+   { t:'Le parole dell’elenco sono divise per lunghezza. 4 lettere: CASA, CANE. 3 lettere: ALA. Ognuna va usata una volta sola. CASA è già scritta.', f:function(){ return G(['CASA','.##.','.##.','.###'],{ hi:{'0,0':V,'0,1':V,'0,2':V,'0,3':V} }); } },
+   { t:'La colonna a sinistra ha 4 caselle e comincia con la C di CASA. Tra le parole da 4 lettere resta solo CANE: ci sta.', f:function(){ return G(['CASA','A##.','N##.','E###'],{ hi:{'1,0':Y,'2,0':Y,'3,0':Y} }); } },
+   { t:'La colonna a destra ha 3 caselle e comincia con l’ultima A di CASA: è ALA.', f:function(){ return G(['CASA','A##L','N##A','E###'],{ hi:{'1,3':Y,'2,3':Y} }); } },
+   { t:'Tutte le parole sono al loro posto e ogni incrocio va bene: lo schema è risolto. Un consiglio: si parte dalle lunghezze con meno parole, perché hanno meno posti possibili.', f:null } ],
+   es:{ t:'Nello schema c’è uno spazio di 4 lettere che incrocia una A già scritta al secondo posto: _ A _ _. Le parole da 4 lettere sono MELA, CASA, PERO. Quale va lì?', f:function(){ return G(['.A..'],{ hi:{'0,1':Y} }); }, o:['MELA','CASA','PERO'], a:1, w:'Solo CASA ha la A al secondo posto. MELA e PERO hanno la E.' } },
+ tangram:{ passi:[
+   { t:'I sette pezzi del tangram formano un quadrato: due triangoli grandi, uno medio, due piccoli, un quadrato e un parallelogramma.', f:function(){ return TAN(); } },
+   { t:'Per ricomporre una sagoma si usano tutti e sette i pezzi. Si toccano, ma non si sovrappongono.', f:null },
+   { t:'Un trucco: metti prima i due triangoli grandi, che occupano metà della sagoma; poi il medio e il quadrato; per ultimi i pezzi piccoli.', f:null },
+   { t:'I pezzi si possono girare e capovolgere: il parallelogramma, capovolto, cambia verso.', f:null } ],
+   es:{ t:'Quanti pezzi ha il tangram, e quanti se ne usano per comporre una sagoma?', f:function(){ return TAN(); }, o:['7, solo quelli che servono','7, tutti','5, tutti'], a:1, w:'I pezzi sono sette e in ogni sagoma si usano tutti, senza sovrapporli.' } },
+ penta:{ passi:[
+   { t:'Ogni pentamino è fatto di 5 quadratini. Ce ne sono 12, ognuno con il nome di una lettera: qui L, P e V.', f:function(){ return PEN(['LLLLV','PPPLV','PPVVV']); } },
+   { t:'Il rettangolo 3×5 ha 15 quadratini: servono tre pentamini (3 × 5 = 15). Ogni pezzo si usa una volta sola.', f:null },
+   { t:'Si comincia dagli angoli e dai bordi: lì un pezzo ha meno posizioni possibili. La L entra lungo il bordo in alto.', f:function(){ return PEN(['LLLL.','...L.','.....']); } },
+   { t:'Poi la P e la V riempiono il resto, senza lasciare buchi. I pezzi si possono girare e capovolgere.', f:function(){ return PEN(['LLLLV','PPPLV','PPVVV']); } } ],
+   es:{ t:'Un rettangolo 5×4 ha 20 quadratini. Quanti pentamini servono per riempirlo?', f:null, o:['4','5','20'], a:0, w:'Ogni pentamino copre 5 quadratini: 20 : 5 = 4 pezzi.' } },
+ hexadoku:{ passi:[
+   { t:'L’Hexadoku è un sudoku 16×16 con 16 simboli: le cifre da 0 a 9 e le lettere da A a F.', f:function(){ return RW('0123456789ABCDEF'.split(''),{ cs:26, size:14 }); } },
+   { t:'Ogni simbolo compare una volta in ogni riga, in ogni colonna e in ogni riquadro 4×4.', f:null },
+   { t:'Si gioca come il sudoku. In questa riga mancano solo due simboli, il 7 e la C: si guarda la colonna di ogni casella vuota per capire quale va dove.', f:function(){ return RW('0123456.89AB.DEF'.split('').map(function(c){ return c==='.'?'':c; }),{ cs:26, size:14, hi:{7:Y,12:Y} }); } } ],
+   es:{ t:'In una riga ci sono già: 0 1 2 3 4 5 6 7 8 9 A B C E F. Quale simbolo manca?', f:null, o:['D','F','G'], a:0, w:'I simboli sono 0–9 e A–F: manca la D. La G non fa parte dell’Hexadoku.' } },
+ linee:{ passi:[
+   { t:'Fasi 1 e 2: pensa a una frase da cui partire, poi traccia linee lente e curve che attraversano il foglio ed escono dai bordi. Dove si incrociano si formano angoli.', f:function(){ return LINES(1); } },
+   { t:'Fase 3: arrotonda gli incroci. Gli angoli appuntiti diventano curve morbide.', f:function(){ return LINES(2); } },
+   { t:'Fase 4: colora le zone che ti piacciono, con un tocco.', f:function(){ return LINES(3); } },
+   { t:'Fase 5: rinforza le linee e guarda il disegno finito. Non c’è un risultato giusto: conta il tempo che ti dedichi.', f:function(){ return LINES(4); } } ],
+   es:{ t:'Due linee si incrociano e formano un angolo appuntito. Che cosa si fa nella fase 3?', f:function(){ return LINES(1); }, o:['Lo si cancella','Lo si arrotonda con una curva morbida','Lo si colora di nero'], a:1, w:'Nella fase 3 gli incroci si arrotondano: l’angolo appuntito diventa una curva morbida.' } },
+ scacchi:{ passi:[
+   { t:'La torre si muove in orizzontale e in verticale, di quante caselle vuole (i punti blu).', f:function(){ return CB('8/8/8/3R4/8/8/8/8',{ dots:['d8','d7','d6','d4','d3','d2','d1','a5','b5','c5','e5','f5','g5','h5'] }); } },
+   { t:'L’alfiere si muove in diagonale.', f:function(){ return CB('8/8/8/3B4/8/8/8/8',{ dots:['a8','b7','c6','e4','f3','g2','h1','a2','b3','c4','e6','f7','g8'] }); } },
+   { t:'Il cavallo si muove «a L»: due caselle in una direzione e una di lato. È l’unico pezzo che salta gli altri.', f:function(){ return CB('8/8/8/3N4/8/8/8/8',{ dots:['c7','e7','b6','f6','b4','f4','c3','e3'] }); } },
+   { t:'Scacco matto: il re nero in g8 è attaccato dalla torre in a8. Non può scappare (f8 e h8 sono sulla riga della torre, f7, g7 e h7 sono occupate dai suoi pedoni) e nessun pezzo può fermare l’attacco. La partita è finita.', f:function(){ return CB('R5k1/5ppp/8/8/8/8/8/6K1',{ hi:{ g8:'#ffd9d4', a8:'#cfe8ff' } }); } } ],
+   es:{ t:'Dove può andare il cavallo in d4 con una mossa?', f:function(){ return CB('8/8/8/8/3N4/8/8/8'); }, o:['In e6','In d6','In e5'], a:0, w:'Il cavallo va due caselle in una direzione e una di lato: da d4 a e6 (due in su, una a destra). d6 e e5 non sono mosse a L.' } },
+ matto:{ passi:[
+   { t:'Tocca al bianco: matto in 1. Prima si guardano le mosse che danno scacco.', f:function(){ return CB('6k1/5ppp/8/8/8/8/8/4R1K1'); } },
+   { t:'La torre può andare in e8: dà scacco al re nero lungo l’ottava riga.', f:function(){ return CB('6k1/5ppp/8/8/8/8/8/4R1K1',{ dots:['e8'], hi:{ e1:'#cfe8ff' } }); } },
+   { t:'Il re nero può scappare? f8 e h8 sono sulla riga della torre, f7, g7 e h7 sono occupate dai suoi pedoni. Nessun pezzo nero può mangiare la torre o mettersi in mezzo.', f:function(){ return CB('4R1k1/5ppp/8/8/8/8/8/6K1',{ hi:{ e8:'#cfe8ff', g8:'#ffd9d4' } }); } },
+   { t:'Quindi Te8 è scacco matto. È il «matto del corridoio»: il re è chiuso dai suoi stessi pedoni.', f:null } ],
+   es:{ t:'Tocca al bianco: matto in 1. Quale mossa dà scacco matto?', f:function(){ return CB('7k/8/6K1/8/8/8/8/Q7'); }, o:['Donna in a8','Donna in h1','Donna in a7'], a:0, w:'Da a8 la donna dà scacco lungo l’ottava riga. Il re non ha caselle libere: g8 è attaccata dalla donna, g7 e h7 dal re bianco. Dh1 è scacco, ma il re scappa in g8; Da7 non dà scacco.' } },
+ mandala:{ passi:[
+   { t:'Il mandala è diviso in spicchi uguali. Tu disegni in uno solo.', f:function(){ return MAND(8,'one'); } },
+   { t:'L’app ripete il tuo tratto in tutti gli altri spicchi: un cerchietto diventa otto cerchietti.', f:function(){ return MAND(8,'all'); } },
+   { t:'Con lo specchio il tratto si riflette anche a metà spicchio, come in un caleidoscopio: i cerchietti diventano sedici.', f:function(){ return MAND(8,'all',true); } },
+   { t:'Non ci sono errori: ogni tratto diventa parte del disegno. Annulla toglie l’ultimo.', f:null } ],
+   es:{ t:'In un mandala a 8 spicchi, senza specchio, disegni un cerchietto. Quanti cerchietti compaiono?', f:function(){ return MAND(8,'one'); }, o:['1','8','16'], a:1, w:'Il tratto si ripete in tutti gli 8 spicchi. Con lo specchio sarebbero 16.' } },
+ motivi:{ passi:[
+   { t:'Scegli un motivo dalla galleria e guarda i suoi tre passaggi.', f:null },
+   { t:'Ripetilo dentro un riquadro, un tratto alla volta, senza fretta.', f:null },
+   { t:'Non esiste la gomma e non esistono errori: un tratto storto diventa parte del motivo. Con Ricalca il motivo appare a matita leggera e lo puoi ripassare.', f:null } ],
+   es:{ t:'Mentre ripeti il motivo, un tratto ti viene storto. Che cosa fai?', f:null, o:['Lo cancello','Continuo: il tratto diventa parte del motivo','Ricomincio il foglio'], a:1, w:'In questa attività non ci sono errori: si continua con calma, e il tratto storto entra nel disegno.' } },
+ differenze:{ passi:[
+   { t:'Guarda le due scene: sembrano uguali, ma qualcosa cambia.', f:function(){ return DIFF(false); } },
+   { t:'Confronta una parte alla volta, sempre nello stesso ordine: il cielo, poi la casa, poi l’albero, poi il prato.', f:null },
+   { t:'Nella scena di destra manca il sole, e la casa è blu invece che rossa: due differenze, da cerchiare.', f:function(){ return DIFF(true); } } ],
+   es:{ t:'Quante differenze ci sono tra le due scene?', f:function(){ return DIFF2(); }, o:['Una','Due','Tre'], a:1, w:'A destra c’è un uccellino in meno e la chioma dell’albero è più piccola: due differenze. Il sole e la casa sono uguali.' } },
+ puntini:{ passi:[
+   { t:'Si parte dal punto 1 e si traccia una linea fino al 2.', f:function(){ return DOTS(2); } },
+   { t:'Poi al 3, al 4, al 5…', f:function(){ return DOTS(5); } },
+   { t:'Alla fine di una parte chiusa si torna al suo primo numero: ecco la casetta.', f:function(){ return DOTS(6); } },
+   { t:'Dove un numero ha la stellina (★) si alza la matita e si ricomincia da lì, senza unirlo al numero prima: qui la porta, dal 6 al 9.', f:function(){ return DOTS(6,true); } } ],
+   es:{ t:'Sei arrivato al 12. Il 13 ha la stellina. Che cosa fai?', f:null, o:['Unisco il 12 al 13','Alzo la matita e riparto dal 13','Salto il 13'], a:1, w:'La stellina vuol dire: si alza la matita e si ricomincia da quel punto, senza unirlo al precedente.' } },
+ cruciverba:{ passi:[
+   { t:'Ogni numero ha una definizione, orizzontale o verticale. 1 orizzontale (4): «Grande distesa d’acqua salata». 1 verticale (4): «Ha cinque dita».', f:function(){ return G(['....','.###','.###','.###'],{ note:{'0,0':'1'} }); } },
+   { t:'Si comincia dalla definizione più facile: MARE.', f:function(){ return G(['MARE','.###','.###','.###'],{ note:{'0,0':'1'}, hi:{'0,0':Y,'0,1':Y,'0,2':Y,'0,3':Y} }); } },
+   { t:'La M è anche l’inizio dell’1 verticale: con cinque dita… MANO. Ogni parola trovata aiuta quelle che incrocia.', f:function(){ return G(['MARE','A###','N###','O###'],{ note:{'0,0':'1'}, hi:{'0,0':V,'1,0':V,'2,0':V,'3,0':V} }); } } ],
+   es:{ t:'Definizione: «Il contrario di freddo» (5). Dagli incroci sai già: _ A _ _ O. Quale parola è?', f:function(){ return G(['.A..O']); }, o:['CAMPO','CALDO','CARRO'], a:1, w:'Tutte e tre hanno la forma _ A _ _ O, ma solo CALDO è il contrario di freddo: è la definizione che decide.' } },
+ anagrammi:{ passi:[
+   { t:'Le lettere di un anagramma sono quelle della parola, mescolate: L O V O T A. L’aiuto dice: «Si apparecchia».', f:function(){ return RW(['L','O','V','O','T','A'],{ cs:44 }); } },
+   { t:'Conta le lettere: sono sei. Pensa alle parole di sei lettere che si apparecchiano…', f:null },
+   { t:'È TAVOLO: T, A, V, O, L, O. Le lettere sono le stesse, ognuna usata una volta.', f:function(){ return RW(['T','A','V','O','L','O'],{ cs:44, hi:{0:V,1:V,2:V,3:V,4:V,5:V} }); } } ],
+   es:{ t:'Lettere: E N A C. Aiuto: «Abbaia». Che parola è?', f:function(){ return RW(['E','N','A','C'],{ cs:44 }); }, o:['CENA','CANE','ACNE'], a:1, w:'Con le stesse quattro lettere si possono fare più parole, ma solo il CANE abbaia: l’aiuto decide.' } },
+ lettere:{ passi:[
+   { t:'Con le lettere della ruota si formano parole. Qui: M, A, R, E.', f:function(){ return WHEEL('MARE'); } },
+   { t:'Ogni lettera si usa al massimo una volta in ogni parola: MARE, RAME, ERA, ARE.', f:null },
+   { t:'Le caselle vuote dicono quante lettere ha ogni parola da trovare. L’ultima riga è la parola che usa tutte le lettere.', f:null } ],
+   es:{ t:'Le lettere della ruota sono C, A, N, E. Quale parola NON si può formare?', f:function(){ return WHEEL('CANE'); }, o:['CENA','CANNE','CANE'], a:1, w:'CANNE ha due N, ma nella ruota la N c’è una volta sola: ogni lettera si usa al massimo una volta.' } }
+};
+// il rebus: l'esempio di prima era un passo solo; ora tre, con il disegno
+function SUN(){ var s='<circle cx="40" cy="40" r="16" fill="#f2c230"/>'; for(var i=0;i<8;i++){ var a=i*Math.PI/4; s+='<line x1="'+(40+22*Math.cos(a))+'" y1="'+(40+22*Math.sin(a))+'" x2="'+(40+32*Math.cos(a))+'" y2="'+(40+32*Math.sin(a))+'" stroke="#e8a317" stroke-width="4" stroke-linecap="round"/>'; } return s; }
+function REB(sol){ return svg(260, 90, T(55,40,'GIRA',30,{ weight:700 })+T(118,40,'+',26)+'<g transform="translate(140 0)">'+SUN()+'</g>'+(sol?T(130,84,sol,15,{ fill:'#1d5a2a', weight:700 }):T(232,40,'(8)',16,{ fill:'#566273' })), 280, 'Rebus: la parola GIRA, poi il disegno di un sole'+(sol?'. Sotto: '+sol+'.':', e il numero 8.')); }
+EX.rebus={ passi:[
+  { t:'Il rebus: la parola GIRA, poi un disegno. Il numero (8) dice che la soluzione ha 8 lettere.', f:function(){ return REB(); } },
+  { t:'Ogni pezzo si legge: le lettere così come sono (GIRA), il disegno con il suo nome (SOLE).', f:function(){ return REB('GIRA · SOLE'); } },
+  { t:'Letti in fila, da sinistra a destra: GIRA + SOLE = GIRASOLE. Le lettere sono 8, come diceva il numero: è la soluzione.', f:function(){ return REB('GIRASOLE (8)'); } }] };
+// gli esercizi dei giochi che avevano già l'esempio passo passo
+var ES={
+ sudoku:{ t:'Sudoku 4×4 (numeri da 1 a 4). Che numero va nella casella gialla (prima riga, terza colonna)?', f:function(){ return G(['12.4','3.12','.143','432.'],{ box:[2,2], hi:{'0,2':Y} }); }, o:['1','3','4'], a:1, w:'Nella riga ci sono già 1, 2 e 4: manca il 3.' },
+ binario:{ t:'Nella riga ci sono due 1 di fila e poi una casella vuota. Che cosa ci va?', f:function(){ return G(['11.0'],{ hi:{'0,2':Y} }); }, o:['0','1','Non si può sapere'], a:0, w:'Tre simboli uguali di fila non sono permessi: dopo due 1 ci va lo 0.' },
+ kakuro:{ t:'Un tratto di due caselle deve fare 3. Quali cifre ci vanno?', f:null, o:['1 e 2','0 e 3','1 e 1'], a:0, w:'Si usano solo le cifre da 1 a 9 (niente zero) e non si ripetono: l’unica possibilità è 1 + 2.' },
+ ponti:{ t:'Un’isola con il numero 4 ha solo due isole vicine. Quanti ponti vanno verso ciascuna?', f:null, o:['Uno e tre','Due e due','Quattro verso una sola'], a:1, w:'Tra due isole ci sono al massimo due ponti: per arrivare a 4 con due vicine servono due ponti per parte.' },
+ logica:{ t:'Davide, Elena e Franco bevono tè, caffè e latte, uno a testa. Elena beve il latte. Davide non beve il tè. Chi beve il tè?', f:null, o:['Davide','Elena','Franco'], a:2, w:'Elena beve il latte, quindi non beve il tè. Davide non beve il tè per l’indizio. Resta Franco (e a Davide resta il caffè).' },
+ crucipixel:{ t:'Una riga ha 6 caselle e l’indizio è 4: un gruppo di 4 caselle colorate di fila. Quali caselle sono sicuramente colorate?', f:function(){ return G(['......']); }, o:['Le due in mezzo (la 3ª e la 4ª)','Le prime quattro','Nessuna'], a:0, w:'Il gruppo di 4 può cominciare dalla 1ª, dalla 2ª o dalla 3ª casella. In tutti e tre i casi la 3ª e la 4ª sono colorate: sono le caselle sicure.' },
+ colora:{ t:'Hai scelto il colore numero 3. Quali zone colori?', f:null, o:['Tutte le zone con il numero 3','Le zone vicine al 3','Quelle che preferisci'], a:0, w:'Ogni zona ha il numero del suo colore: con il colore 3 si colorano le zone con il 3. Le zone giuste diventano grigie, così le trovi subito.' },
+ copia:{ t:'Nel modello una linea va dal punto in alto a sinistra al punto al centro della griglia. Nella tua copia dove la disegni?', f:null, o:['Tra gli stessi due punti della tua griglia','Dove c’è più spazio','Al centro del foglio'], a:0, w:'La griglia serve proprio a questo: si conta e si ritrova lo stesso punto di partenza e lo stesso punto di arrivo.' },
+ cifrato:{ t:'In un crittografato hai scoperto che il numero 7 è la lettera R. Nelle altre parole, il 7 è:', f:null, o:['Sempre la R','Una lettera diversa','Una vocale'], a:0, w:'Lo stesso numero è sempre la stessa lettera: si scrive la R in tutte le caselle con il 7.' },
+ quadrati:{ t:'Quadrato magico: ogni riga, colonna e diagonale somma 15. Che numero va nella casella gialla (in basso a destra)?', f:function(){ return G(['276','951','43.'],{ hi:{'2,2':Y} }); }, o:['7','8','9'], a:1, w:'Nell’ultima riga 4 + 3 = 7: per arrivare a 15 serve 8. Controllo: colonna 6 + 1 + 8 = 15.' },
+ mahjong:{ t:'Una tessera non ha niente sopra, ma ha una tessera a destra e una a sinistra. Si può prendere?', f:null, o:['Sì','No','Solo con una tessera uguale libera'], a:1, w:'Una tessera è libera solo se non ha niente sopra e ha almeno un lato, destro o sinistro, libero.' },
+ crucipuzzle:{ t:'Hai trovato la parola SOLE nello schema. Che cosa fai?', f:null, o:['La cerchi e la cancelli dall’elenco','La lasci: una lettera può servire una volta sola','Ricominci dall’inizio'], a:0, w:'Si cerchia la parola e la si cancella dall’elenco. Una lettera può servire anche a più parole.' },
+ rebus:{ t:'Rebus: la sillaba MA, poi il disegno di un RE. Come si legge?', f:function(){ return RW(['MA','(un re)'],{ cs:90, size:16, what:'Rebus: la sillaba MA, poi il disegno di un re' }).replace(/aria-label="[^"]*"/,'aria-label="Rebus: la sillaba MA, poi il disegno di un re."'); }, o:['REMA','MARE','MA RE MA'], a:1, w:'I pezzi si leggono in fila, da sinistra a destra: MA + RE = MARE.' },
+ futoshiki:{ t:'Riga di 3 caselle, numeri da 1 a 3. La terza casella ha il 3; tra la prima e la seconda c’è il segno >. Che cosa va nella prima?', f:function(){ return FUT(); }, o:['1','2','3'], a:1, w:'Restano 1 e 2 per le prime due caselle. La prima dev’essere più grande della seconda: 2 > 1.' },
+ suguru:{ t:'Una regione di 2 caselle ha già un 1. Che cosa va nell’altra casella?', f:null, o:['1','2','3'], a:1, w:'Una regione di 2 caselle contiene 1 e 2: nell’altra va il 2.' },
+ numbrix:{ t:'Tra la casella con il 4 e quella con il 6 c’è una sola casella vuota, vicina a tutte e due. Che numero ci va?', f:function(){ return G(['4.6'],{ hi:{'0,1':Y} }); }, o:['5','3','7'], a:0, w:'Ogni numero è accanto al successivo: tra 4 e 6 ci va il 5.' }
+};
+var A=window.RULES; if(!A) return;
+Object.keys(EX).forEach(function(k){ if(!A[k]) return; if(!A[k].passi || A[k].passi.length<2) A[k].passi=EX[k].passi; if(EX[k].es) A[k].es=EX[k].es; });
+Object.keys(ES).forEach(function(k){ if(A[k] && !A[k].es) A[k].es=ES[k]; });
+// le figure di «Copia la figura» vengono dal suo strumento: si aggiunge la descrizione
+function addAlt(html, t){ return String(html).replace(/<svg([^>]*?)\s(role|aria-label|aria-hidden)="[^"]*"/g,'<svg$1').replace(/<svg([^>]*?)\s(role|aria-label|aria-hidden)="[^"]*"/g,'<svg$1').replace('<svg','<svg role="img" aria-label="'+t.replace(/"/g,'”')+'"'); }
+if(A.copia && A.copia.passi) [ 'Il modello: una griglia di 4 per 4 punti con una linea spezzata che parte dall’angolo in alto a sinistra: un passo a destra, uno in basso, uno a destra, uno in basso.',
+  'La copia: una griglia vuota di 4 per 4 punti con la prima linea, dall’angolo in alto a sinistra al punto accanto a destra.',
+  'La copia finita: la stessa linea spezzata del modello, negli stessi punti.' ].forEach(function(t,i){ var p=A.copia.passi[i]; if(!p || !p.f) return; var f=p.f; p.f=function(){ return addAlt(f(), t); }; });
+// pagine che sono un altro nome dello stesso gioco
+[['labgioca','labirinti'],['tangioca','tangram'],['corso','scacchi']].forEach(function(p){ var a=A[p[0]], b=A[p[1]]; if(!a || !b) return; if(!a.passi || !a.passi.length) a.passi=b.passi; if(!a.es) a.es=b.es; });
+if(A.corso) A.corso.es={ t:'Il pedone bianco in e2 fa la sua prima mossa. Dove può andare?', f:function(){ return CB('8/8/8/8/8/8/4P3/8'); }, o:['Solo in e3','In e3 oppure in e4','In e3, e4 o d3'], a:1, w:'Alla prima mossa un pedone può avanzare di una o di due caselle, sempre dritto: e3 o e4. In diagonale si muove solo per catturare.' };
+window.EsempiFig={ CB:CB, DB:DB, RW:RW };
 })();
 
 /* ===================== INSTALLA L'APP =====================
@@ -10172,7 +10509,7 @@ var Percorso=(function(){
       G_LEVELS.map(function(l,i){ if(state.settings.simple && i>1) return ''; var r=(S[g]||{})[i]; return '<a class="btn lv" href="#p-'+g+'-'+i+'"><b>'+l+'</b><small>'+G.lv[i]+(r&&r.won?' · vinte '+r.won:'')+'</small></a>'; }).join('')+'</div></section>';
     // 2. regole
     h+='<section class="pstep" id="ps-impara"><div class="rdhead"><h2><b>2</b> Impara le regole</h2><button class="btn small rd" data-read aria-label="Leggi ad alta voce questa parte">🔊 Leggi</button></div>'+(R.scopo?'<p><b>Lo scopo:</b> '+R.scopo+'</p>':'')+(R.regole?'<ol class="rlist">'+R.regole.map(function(x){ return '<li>'+x+'</li>'; }).join('')+'</ol>':'')+
-      (R.passi&&R.passi.length?'<button class="btn" data-ex>Guarda un esempio passo passo</button>':'')+(C.strategie&&C.strategie.length?'<h3>Come si ragiona</h3><ul class="rlist">'+C.strategie.map(function(x){ return '<li>'+x+'</li>'; }).join('')+'</ul>':'')+'</section>';
+      '<div class="row">'+(R.passi&&R.passi.length?'<button class="btn" data-ex>Guarda un esempio passo passo</button>':'')+(R.es?'<button class="btn" data-es>Fai l’esercizio</button>':'')+'</div>'+(C.strategie&&C.strategie.length?'<h3>Come si ragiona</h3><ul class="rlist">'+C.strategie.map(function(x){ return '<li>'+x+'</li>'; }).join('')+'</ul>':'')+'</section>';
     // 3. come si costruisce
     h+='<section class="pstep" id="ps-costruisci"><h2><b>3</b> Come si costruisce</h2><p>Un piccolo corso in '+C.lezioni.length+' lezioni: che cosa rende buono questo gioco e come lo prepara chi lo inventa.</p><ol class="lezioni">'+
       C.lezioni.map(function(L,i){ return '<li class="lezione"><div class="rdhead"><h3><span>Lezione '+(i+1)+'</span> '+L.t+'</h3><button class="btn small rd" data-read aria-label="Leggi ad alta voce questa parte">🔊 Leggi</button></div>'+fig(L.f)+L.p.map(function(x){ return '<p>'+x+'</p>'; }).join('')+'</li>'; }).join('')+'</ol></section>';
@@ -10188,6 +10525,7 @@ var Percorso=(function(){
     app.innerHTML=h;
     app.querySelectorAll('[data-go]').forEach(function(a){ a.onclick=function(e){ e.preventDefault(); var t=$('ps-'+a.dataset.go); if(t){ t.scrollIntoView({ behavior:'smooth', block:'start' }); var hh=t.querySelector('h2'); if(hh){ hh.setAttribute('tabindex','-1'); hh.focus({ preventScroll:true }); } } }; });
     var ex=app.querySelector('[data-ex]'); if(ex) ex.onclick=function(){ Rules.open(g,'esempio'); };
+    var es=app.querySelector('[data-es]'); if(es) es.onclick=function(){ Rules.open(g,'esercizio'); };
     var lb=app.querySelector('[data-last]'); if(lb) lb.onclick=function(){ open(g, last[g].d, 'partita giocata'); };
     app.querySelectorAll('[data-fresh]').forEach(function(b){ b.onclick=function(){ fresh(g, +b.dataset.fresh, b); }; });
     var em=app.querySelector('[data-empty]'); if(em) em.onclick=function(e){ e.preventDefault(); open(g, null); }; var e2=app.querySelector('[data-empty2]'); if(e2) e2.onclick=function(){ open(g, null); }; }
@@ -10211,7 +10549,7 @@ var Percorso=(function(){
     h+='<section class="panel"><h2>Arte e benessere</h2><p>Colorare con i numeri un’opera d’arte scaricata da un museo o una tua foto, creare mandala, disegnare con calma: e che cosa dicono davvero gli studi sull’arte e sul colorare.</p><div class="row"><a class="btn primary" href="#p-colora-0">Colora un disegno</a><a class="btn" href="#colora" data-coimg="1">Colora un’opera d’arte</a><a class="btn" href="#arte">Che cosa dicono gli studi</a></div></section>';
     h+='<section class="panel"><h2>Enigmi celebri</h2><p>I sette ponti di Königsberg, le tre porte, il sudoku con 17 indizi, il messaggio di Zodiac: rompicapi famosi <b>risolti e spiegati</b>, e problemi <b>ancora aperti</b> che forse qualcuno risolverà.</p><a class="btn" href="#enigmi">Scopri gli enigmi celebri</a></section>';
     h+='<section class="panel"><h2>Altri strumenti per creare</h2><p>Mandala, disegni da colorare, trova le differenze, cruciverba con le tue definizioni, rebus, giochi di squadra e <b>Crea un libro</b> per stampare, regalare o pubblicare un libretto: li trovi in <a href="#crea">Crea</a>.</p></section>'+
-      '<p class="note">Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.37.</p>';
+      '<p class="note">Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). AttivaMente versione 3.40.</p>';
     app.innerHTML=h; }
 
   // un solo riquadro che spiega tutti i modi di portare fuori un gioco, sopra i pulsanti Condividi e Stampa
@@ -10649,7 +10987,7 @@ function renderGuide(){
   var html='<section class="toolhead"><h1>Come si usa</h1><p>Tutto quello che serve per creare, stampare e regalare i giochi. Si legge in dieci minuti; puoi anche saltare direttamente alla parte che ti interessa.</p></section><div class="guide"><nav class="gtoc" aria-label="Indice"><ol>'+toc.map(function(x){ return '<li><a href="#guida" data-g="'+x[0]+'">'+x[1]+'</a></li>'; }).join('')+'</ol></nav><div class="gbody">'+
   sec('cose','Che cos’è AttivaMente','<p>È un laboratorio per <b>giocare, imparare e creare</b> giochi. Si comincia giocando; poi si impara come è costruito il gioco; infine si crea il proprio. I giochi sono: labirinti, mandala, cruciverba, sudoku, Mahjong e molti altri. Non è un’app che fa giocare al posto tuo: sei tu a disegnare, scegliere le parole, costruire lo schema. L’app fa il lavoro noioso e rigoroso: controlla che il gioco rispetti le regole e, nei rompicapi che lo richiedono, che la soluzione sia una sola; prepara la stampa e la soluzione.</p><p>Funziona su telefono, tablet e computer, gratis, senza account e senza pubblicità.</p>')+
   sec('gioca','Giocare','<p>Nella pagina <a href="#gioca">Gioca</a> trovi partite create all\u2019istante e verificate (nei rompicapi la soluzione è una sola), in cinque livelli: Principiante, Facile, Medio, Difficile, Esperto. Ogni giorno c\u2019è anche il gioco del giorno, uguale per tutti. Ci sono rompicapi di numeri (sudoku, Hexadoku, Futoshiki, Suguru, Numbrix, Kakuro, Ponti), di parole (parole a incastro, crucipuzzle, crittografato), di logica e di spazio (enigma logico, labirinto, tangram, pentamini, crucipixel), tre giochi di memoria (Che cosa manca?, Sequenze, Blocchi di Corsi) e il Mahjong, che all\u2019Esperto usa il doppio mazzo da 288 tessere. Quasi tutti si possono anche creare: in Crea trovi lo stesso gioco con gli strumenti per progettarlo, verificarlo e stamparlo. Le statistiche (partite vinte, tempo migliore) restano solo sul tuo dispositivo. In ogni gioco il pulsante <b>? Come si gioca</b> spiega le regole e, in quasi tutti i giochi, mostra un esempio risolto passo passo.</p>')+
-  sec('percorso','Gioca, impara, crea','<p>Per ognuno dei 28 giochi c’è un <b>percorso</b> in quattro tappe (lo apri dalla pagina <a href="#home">Inizia</a> o dal link «Impara a crearlo» in Gioca):</p><ol class="gsteps"><li><b>Gioca</b>: ogni partita viene creata al momento, dal Principiante all’Esperto.</li><li><b>Impara le regole</b>: lo scopo, le regole, un esempio passo passo e come si ragiona.</li><li><b>Come si costruisce</b>: un piccolo corso su che cosa rende buono quel gioco e come lo prepara chi lo inventa.</li><li><b>Crea il tuo</b>: non parti da un foglio bianco (tranne negli scacchi, dove prepari tu una posizione nuova su una scacchiera vuota). L’app apre in Crea una <b>struttura pronta</b> (la partita che hai appena giocato, oppure una nuova del livello che scegli) e tu la trasformi; l’app controlla ogni passo.</li></ol><p>Anche durante una partita trovi il pulsante <b>Crealo tu</b>.</p>')+
+  sec('percorso','Gioca, impara, crea','<p>Per ognuno dei 28 giochi c’è un <b>percorso</b> in quattro tappe (lo apri dalla pagina <a href="#home">Inizia</a> o dal link «Impara a crearlo» in Gioca):</p><ol class="gsteps"><li><b>Gioca</b>: ogni partita viene creata al momento, dal Principiante all’Esperto.</li><li><b>Impara le regole</b>: lo scopo, le regole, un esempio completo passo passo, un esercizio per provare (tre risposte, una giusta, con la spiegazione) e come si ragiona. Esempio ed esercizio ci sono per ogni gioco, anche in Crea, dal pulsante «? Come si gioca».</li><li><b>Come si costruisce</b>: un piccolo corso su che cosa rende buono quel gioco e come lo prepara chi lo inventa.</li><li><b>Crea il tuo</b>: non parti da un foglio bianco (tranne negli scacchi, dove prepari tu una posizione nuova su una scacchiera vuota). L’app apre in Crea una <b>struttura pronta</b> (la partita che hai appena giocato, oppure una nuova del livello che scegli) e tu la trasformi; l’app controlla ogni passo.</li></ol><p>Anche durante una partita trovi il pulsante <b>Crealo tu</b>.</p>')+
   sec('crea','Creare un gioco','<ol class="gsteps"><li><b>Scegli un gioco</b> dalla pagina <a href="#home">Giochi</a>. I giochi sono divisi in famiglie: Disegno e spazio, Parole, Numeri logica e tavolo, Squadra.</li><li><b>Segui il riquadro Passo passo</b> a destra (sul telefono, sotto il foglio). Con il pulsante a forma di altoparlante le istruzioni vengono lette ad alta voce.</li><li><b>Crea</b>: tocca, disegna, scrivi. Puoi provare e correggere: <b>Annulla</b> torna indietro di un passo, <b>Ripeti</b> lo rifà, <b>Ricomincia da capo</b> dà un foglio nuovo (e anche quello si annulla).</li><li><b>Premi Controlla</b>: l’app ti dice se il gioco funziona e, se no, che cosa sistemare. Per esempio: la strada del labirinto arriva all’uscita? Il sudoku ha una sola soluzione? Le parole del cruciverba esistono?</li><li><b>Dai un titolo e una dedica</b> nel riquadro "Per chi è?": compaiono in cima al foglio stampato.</li></ol><h3>Cambiare le regole e inventare</h3><ul><li><b>Inventa una variante</b>: in quasi tutti i giochi di Crea il riquadro <b>Cambia le regole</b> porta a <a href="#inventa">Inventa un gioco</a>, con le regole di quel gioco già scritte. Le cambi, le provi con le domande guida e stampi il foglio del tuo gioco nuovo. L’app controlla che il foglio sia completo e chiaro; se il gioco funziona lo dicono le partite di prova.</li><li><b>Regole in più da combinare</b>: nel <a href="#sudoku">Sudoku</a> le diagonali, le finestre, le caselle centrali e pari e dispari; nel <a href="#futoshiki">Futoshiki</a> le diagonali e pari e dispari; nel <a href="#suguru">Suguru</a> pari e dispari. Qui l’app sa ancora verificare che la soluzione sia una sola. Nella <a href="#dama">Dama</a> scegli varianti conosciute (presa all’indietro, dama volante, presa libera, dama a perdere), che finiscono sul foglio delle regole.</li><li><b>Scrivi la tua storia</b> in <a href="#avventura">Avventura a dadi</a> e <b>inventa il tuo alfabeto</b> di simboli in <a href="#cifrari">Messaggi cifrati</a>.</li></ul><p class="evidence">Alcuni giochi usano il dizionario italiano (cruciverba a schema, crittografato, anagrammi, ruota di lettere). La prima volta serve la connessione per scaricarlo (circa 3 MB); poi resta sul dispositivo.</p>')+
   sec('esporta','Esportare e condividere','<p>In ogni strumento di Crea il riquadro <b>Esporta e condividi</b> riassume tutti i modi per portare fuori un gioco:</p><ul><li><b>Come file</b>: <b>Esporta questo gioco</b> crea un piccolo file da mandare per email o WhatsApp; chi lo riceve preme <b>Importa un gioco</b> (in Crea, in Gioca o in I miei lavori) e lo ritrova pronto, anche da modificare. Anche una partita di Gioca si esporta, con <b>Esporta la partita</b>.</li><li><b>Per giocare con altri</b>: in ogni partita, <b>Sfida qualcuno</b> manda la stessa partita ad altre persone; ognuno la risolve sul suo dispositivo e poi si confrontano i tempi. Giocare insieme nello stesso momento da telefoni diversi non è possibile, perché servirebbe un server e l’app non invia dati a nessuno. Nel <b>Memory</b> si gioca anche <b>a turno sullo stesso dispositivo</b>, da 2 a 4 giocatori, ognuno con il suo punteggio.</li><li><b>Su carta</b>: Stampa. Esce un foglio pulito, con la soluzione su una pagina a parte.</li><li><b>In PDF</b>: Stampa e, come stampante, scegli «Salva come PDF». Il PDF si manda per email o WhatsApp e si stampa anche in copisteria.</li><li><b>Da giocare sullo schermo</b>: Crea il link da giocare; con il QR code il link si stampa su un biglietto.</li><li><b>Come immagine</b>: Scarica immagine (un file SVG, che si inserisce in documenti e presentazioni).</li><li><b>In un libretto</b>: salva i tuoi giochi e raccoglili con <a href="#libro">Crea un libro</a>.</li><li><b>Su un altro dispositivo</b>: I miei lavori → Esporta file, poi Importa.</li></ul>')+
   sec('libretto','Il tuo libretto: crearlo, regalarlo, venderlo','<h3>Crearlo</h3><ol class="gsteps"><li><b>Crea i giochi</b> seguendo i percorsi (pagina <a href="#home">Inizia</a>) e premi <b>Salva nei miei lavori</b> per ognuno. Usa temi, nomi e parole di chi lo riceverà: è questo che rende un libretto unico.</li><li>Apri <a href="#libro">Crea un libro</a>: spunta i giochi che hai creato tu e, se vuoi, aggiungi giochi nuovi creati dall’app. Scrivi titolo, sottotitolo, autore; <b>riscrivi l’introduzione con parole tue</b> (quella proposta è solo un esempio). Scegli il formato.</li><li>Premi <b>Prepara il libro</b> e guarda l’anteprima; <b>Controlla</b> ti avverte se mancano pagine o se i margini non bastano per KDP.</li><li><b>Stampa → Salva come PDF</b>, con margini «Nessuno» e grafica di sfondo attiva. Le soluzioni sono in fondo al libro. Apri sempre il PDF e sfoglialo tutto prima di usarlo.</li></ol>'+

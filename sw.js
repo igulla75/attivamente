@@ -1,26 +1,50 @@
-// Funzionamento senza connessione.
-// La pagina dell'app si chiede sempre prima alla rete (così dopo un aggiornamento si vede subito la versione nuova)
-// e si usa la copia salvata solo senza connessione. Gli altri file (icona, dizionario…) si prendono dalla copia salvata.
-const CACHE = 'attivamente-v59';
+// AttivaMente 3.52 – funzionamento senza connessione.
+// - La pagina dell'app si chiede sempre prima alla rete (dopo un aggiornamento si vede subito la versione nuova);
+//   la copia salvata si usa solo senza connessione.
+// - Il dizionario si salva già all'installazione, in una cache separata, così i giochi di parole funzionano offline.
+// - Se senza connessione manca un file, si risponde 503 (mai la pagina dell'app al posto di un altro file).
+// - Questo service worker non tocca la versione inglese in /en/ né le sue cache.
+const CACHE = 'attivamente-v72';
+const DIZ = 'attivamente-diz-v1';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
-// cache:'reload' scavalca la cache del browser: si salva davvero la versione appena pubblicata
-self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(u => new Request(u, { cache: 'reload' }))))); self.skipWaiting(); });
-// si cancellano solo le copie vecchie di questa app: la versione inglese (cartella /en) ha le sue, che non si toccano
-self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== CACHE && /^attivamente-v\d+$/.test(x)).map(x => caches.delete(x))))); self.clients.claim(); });
+const DIZ_FILES = ['./dizionario/comuni.txt', './dizionario/rare.txt'];
+const fresh = u => new Request(u, { cache: 'reload' });
+
+self.addEventListener('install', e => {
+  e.waitUntil(Promise.all([
+    caches.open(CACHE).then(c => c.addAll(FILES.map(fresh))),
+    // il dizionario non deve bloccare l'installazione se per un momento non si scarica
+    caches.open(DIZ).then(c => Promise.all(DIZ_FILES.map(u => c.add(fresh(u)).catch(() => {}))))
+  ]));
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(k => Promise.all(k
+    .filter(x => x.startsWith('attivamente-') && !x.startsWith('attivamente-en') && x !== CACHE && x !== DIZ)
+    .map(x => caches.delete(x)))));
+  self.clients.claim();
+});
+
+const SCOPE = new URL(self.registration.scope);
+function isEnglish(url) { return url.pathname.startsWith(SCOPE.pathname + 'en/'); }
 function isPage(req, url) { return req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('/index.html'); }
+const offline = () => new Response('Senza connessione: questo file non è ancora salvato sul dispositivo.',
+  { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  if (url.pathname.indexOf('/en/') >= 0) return; // la versione inglese ha il suo service worker
-  if (url.origin === location.origin && isPage(e.request, url)) {
+  if (url.origin !== location.origin || isEnglish(url)) return; // altri siti e versione inglese: nessun intervento
+  if (isPage(e.request, url)) {
     e.respondWith(fetch(new Request(url.href, { cache: 'no-cache', credentials: 'same-origin' })).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
       return res;
-    }).catch(() => caches.match(e.request).then(r => r || caches.match('./index.html'))));
+    }).catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')).then(r => r || offline())));
     return;
   }
   e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-    if (res.ok && url.origin === location.origin) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
+    if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
     return res;
-  }).catch(() => caches.match('./index.html'))));
+  }).catch(offline)));
 });

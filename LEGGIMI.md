@@ -1,112 +1,38 @@
 # AttivaMente – Il laboratorio dei giochi da creare
 
-App web gratuita che accompagna il libro «AttivaMente – Dal gioco alla creazione» e il corso. Funziona su telefono, tablet e computer, si può installare come un'icona e lavora anche senza connessione. Nessun account, nessuna pubblicità, nessun conteggio delle visite: i lavori restano sul dispositivo e l'app non chiede niente a servizi esterni (anche i caratteri sono dentro l'app). Come per ogni sito, la pagina e il dizionario si scaricano dal sito dove l'app è pubblicata.
+App web gratuita che accompagna il libro e il corso. Funziona su telefono, tablet e computer, si può installare come un'icona e lavora anche senza connessione. Nessun account, nessun dato inviato: tutto resta sul dispositivo (dalla 3.34 anche i caratteri sono dentro la pagina, senza richieste a servizi esterni).
 
-## Versione 3.40 (16 novembre 2026)
-Risposta alla verifica indipendente della 3.39.
-- **Colorare con i numeri:** le quattro figure dell'esempio hanno una descrizione completa per i lettori di schermo. Per ogni zona dicono dove sta, il suo numero e se è ancora bianca, grigia (del colore scelto) o colorata.
-- **Codice Morse:** nelle descrizioni i segni si leggono a parole («punto», «linea»), non come simboli.
-- Piccole correzioni di grammatica nelle descrizioni delle griglie («una riga»).
-- Verifica in `VERIFICA-3.40.md` (nei sorgenti).
+## Che cosa contiene questa cartella (versione 3.52)
+- `index.html` – l'app completa (versione 3.52, 24 novembre 2026)
+- `sw.js` – funzionamento senza connessione (cache v72; dizionario in una cache separata)
+- `VERIFICA-3.52.md` – il collaudo di questa versione
+- `manifest.webmanifest`, `icon.svg` – installazione come app
+- `dizionario/` – parole italiane per i giochi di parole, con la licenza
 
-## Versione 3.39 (15 novembre 2026)
-Risposta alla verifica indipendente della 3.38.
-- **Esempio del Sudoku 4×4 corretto.** La griglia di partenza ammetteva due soluzioni, e la figura finale contraddiceva un numero dato. Ora la griglia ha una sola soluzione, ogni figura rispetta i numeri dati e la soluzione, e ogni passo nomina la casella anche per posizione («prima riga, seconda colonna»), non solo per colore. Una prova automatica controlla tutto questo.
-- **Figure accessibili.** Ogni figura degli esempi e degli esercizi ha una descrizione per i lettori di schermo:
-  - le griglie si leggono riga per riga, con le caselle evidenziate dette per posizione;
-  - le scacchiere elencano i pezzi con la loro casella;
-  - la dama descrive pedine e percorso di presa;
-  - Kakuro, Ponti, Futoshiki, Suguru e la tabella degli enigmi logici descrivono somme, ponti, segni e regioni.
-- Due esercizi sono cambiati perché ripetevano l'esempio: enigma logico e crucipixel.
-- Verifica in `VERIFICA-3.39.md` (nei sorgenti).
+Nota del 24 novembre 2026: la 3.52 parte dalla copia della 3.51 pubblicata su claude.ai il 19 novembre. Il dizionario è identico a quella copia (impronte SHA-256 controllate); `index.html` è quella copia con le sole correzioni della 3.52, applicate dallo script `patch352.py` (nello zip delle prove). `sw.js` è stato riscritto seguendo le note di lavoro della 3.44–3.51, perché il file originale della 3.51 non è stato ritrovato. I sorgenti separati (src/, tools/, tests/) e i file VERIFICA-3.30…3.51 non sono stati ritrovati.
 
-## Versione 3.38 (15 novembre 2026)
-- **Per ogni gioco un esempio completo e un esercizio.**
-  - **Esempio passo passo:** prima c'era per 16 giochi, ora per tutti e 48 gli strumenti con regole, con un disegno a ogni passo (anche i giochi di squadra, di memoria e d'arte). Il rebus ha un esempio più completo.
-  - **Esercizio:** una domanda con un disegno e tre risposte, una sola giusta. Se si sbaglia, la risposta si spegne e si riprova; dopo due errori l'app mostra la risposta giusta. Sempre con la spiegazione.
-  - Alla fine dell'esempio c'è «Ora prova tu»; dopo l'esercizio, «Ora gioca una partita», al livello Principiante.
-- **Dove si trovano:** nel percorso Impara («Guarda un esempio passo passo», «Fai l'esercizio») e in ogni gioco, in Gioca e in Crea, dal pulsante «? Come si gioca», che ora ha quattro schede: Le regole, Esempio passo passo, Esercizio, Come si crea.
-- Verifica in `VERIFICA-3.38.md` (nei sorgenti).
+## Versione 3.52 (24 novembre 2026)
+- **Privacy:** un file o un link ricevuto non può più far scaricare immagini da internet (prima poteva, per esempio con le foto del Memory). Restano ammesse solo le foto incluse nel file.
+- **Telefono:** intestazione molto più bassa (da 248 a 115 px) con il menu su una riga che scorre; caselle di spunta e cursori più grandi; avviso nei livelli molto fitti (Hexadoku, Esperto di Mahjong, Crucipixel, Labirinto e altri).
+- **Correzioni:** la finestra «Come si gioca» si chiude cambiando pagina (anche con il tasto Indietro); Copia con la griglia rifiuta i link rovinati invece di disegnare linee sbagliate; i testi lunghissimi vanno a capo; l'app parte anche se la memoria del browser è rovinata; lo schermo intero, dove non è disponibile, lo dice.
+- Verifica in `VERIFICA-3.52.md`.
 
-## Versione 3.37 (15 novembre 2026)
-Risposta alla verifica indipendente della 3.36.
-- **Inventa un gioco** accetta anche giochi senza vincitore: il campo si chiama «Come finisce» (chi vince, quando è risolto, o quando il gioco è concluso). La domanda di prova sulla soluzione unica vale solo per gli enigmi che la promettono.
-- **Aree da toccare più grandi sul telefono:**
-  - le etichette sugli studi rispondono al tocco su 44 px di altezza, anche se il disegno resta piccolo;
-  - i pulsanti a scelta sono larghi almeno 44 px;
-  - le caselle di spunta non si stringono più accanto alle frasi lunghe;
-  - le caselle dei messaggi cifrati sono più larghe;
-  - la ruota del cifrario di Cesare è più alta.
-- Dove l'app non promette benefici (per esempio Inventa un gioco) non compare più un'etichetta vuota sugli studi.
-- **Pubblicazione:** il dizionario sta in `docs/dizionario/`, insieme alla pagina. `tools/release.py` lo ricopia a ogni rilascio, e una prova controlla che la sola cartella `docs/` basti.
-- Verifica in `VERIFICA-3.37.md` (nei sorgenti).
-
-## Versione 3.36 (14 novembre 2026)
-- **Regole in più da combinare anche in altri giochi**:
-  - **Futoshiki**: le due diagonali (anche lì numeri tutti diversi) e pari e dispari (caselle grigie). L'app prepara la griglia, toglie gli indizi superflui e verifica che la soluzione resti una sola: con tutte e due le regole a volte basta qualche segno, senza nessun numero.
-  - **Suguru**: pari e dispari. Spesso bastano due o tre numeri dati.
-  - **Dama**: varianti conosciute da scegliere e combinare (le pedine mangiano anche all'indietro, la dama «volante», presa non obbligatoria, la dama «a perdere»). Finiscono sul foglio delle regole, stampato con le pedine; la 10×10 ha le regole della dama internazionale.
-- La guida («Creare un gioco») elenca tutti i giochi con regole in più.
-- Verifica in `VERIFICA-3.36.md` (nei sorgenti).
-
-## Versione 3.35 (14 novembre 2026)
-- **Inventa un gioco** (Crea, nuova famiglia «Inventa le regole»): un gioco tutto tuo, con regole nuove.
-  - Si parte da un foglio bianco o dalle regole di un gioco dell'app, e si cambiano.
-  - Una scheda guidata chiede nome, per chi è, durata, materiale, scopo, regole (una per riga), come si vince, un esempio e le varianti.
-  - Otto domande aiutano a provare il gioco: si arriva sempre alla fine? Le regole bastano? Un'altra persona l'ha capito leggendo solo il foglio?
-  - Si stampa il foglio del gioco, anche con una griglia, delle righe o uno spazio per disegnare, oppure lo si manda come link.
-  - L'app controlla che il foglio sia completo e chiaro; se il gioco funziona lo dicono le partite di prova, e l'app lo dice.
-- **«Cambia le regole → Inventa una variante»** compare in tutti i giochi di Crea: apre Inventa un gioco con le regole di quel gioco già scritte.
-- **Sudoku: regole in più da combinare.** Le due diagonali, le quattro finestre (o la finestra centrale nel 4×4), le caselle al centro dei riquadri, e pari e dispari (caselle grigie).
-  - L'app genera la griglia, toglie i simboli e verifica che la soluzione resti una sola.
-  - Con i riquadri irregolari si può aggiungere solo pari e dispari.
-- **Avventura a dadi: «Scrivi la tua storia».** Si inventano le scene, i tre modi di affrontare ogni prova (facile, normale o difficile), gli esiti e i finali, partendo da un foglio bianco o da una storia dell'app.
-  - L'app controlla che non manchi nessun testo e stima quante volte si vince giocando bene, provandola molte volte. Se è troppo difficile lo dice.
-- **Messaggi cifrati: «Il mio alfabeto».** Ogni lettera diventa un simbolo scelto da te, tra 40 simboli semplici da ridisegnare anche a mano. Con la chiave sul foglio o senza, da scoprire con le frequenze.
-- Verifica in `VERIFICA-3.35.md` (nei sorgenti).
-
-## Versione 3.34 (14 novembre 2026)
-- **Caratteri dentro l'app.** Prima i caratteri (Atkinson Hyperlegible e Bricolage Grotesque) si scaricavano da Google Fonts a ogni apertura: una richiesta a un servizio esterno, che la frase «nessun dato inviato» non diceva. Ora sono dentro la pagina (licenza SIL OFL 1.1, in `vendor/fonts` nei sorgenti): l'app non chiede più niente ad altri servizi, e i caratteri giusti si vedono anche senza connessione.
-- La pagina «Come si usa → Privacy e limiti» e questo LEGGIMI spiegano con precisione che cosa resta sul dispositivo e che cosa si scarica dal sito.
-- Le descrizioni dicono che l'app accompagna il libro e il corso.
-- Il pacchetto dei sorgenti contiene anche la cartella pubblicata (`docs/`: index.html, manifest, icona, service worker), così si può controllare che corrisponda ai sorgenti.
-- Verifica in `VERIFICA-3.34.md` (nei sorgenti).
-
-## Versione 3.33 (14 novembre 2026)
-- **Nuova famiglia «Giochi di ruolo»**, con un gioco nuovo: **Avventura a dadi**. In tutto i giochi ora sono 28.
-  - In Gioca è un'avventura da fare da soli: si sceglie un personaggio (ognuno con Forza, Astuzia e Cuore e un oggetto), si attraversano da 3 a 6 scene e un finale. In ogni scena si sceglie come affrontare la prova e si tira il dado: dado + abilità deve arrivare al numero indicato.
-  - Chi non ci riesce perde un cuore di Energia, ma la storia va avanti: non ci si blocca mai. Si vince arrivando al finale con almeno un cuore.
-  - Le storie sono cinque, scritte per l'app (il castello della regina, il faro, la montagna, la biblioteca incantata, la notte al museo); ogni partita sceglie la storia, le scene e i tre personaggi proposti.
-  - In Crea si prepara il kit per giocare al tavolo, da 1 a 6 persone più chi conduce: si scelgono storia, scene, difficoltà e personaggi. Si stampano le schede dei personaggi da ritagliare, le regole e il copione per chi conduce. Nessuno viene eliminato: chi resta senza cuori aiuta gli altri. Lo stesso gioco si manda come link.
-  - Nel percorso Impara: da dove vengono i giochi di ruolo e i libri-gioco, come si conduce, come si costruisce un'avventura, e che cosa (non) sappiamo dagli studi.
-- **Corretto** il pulsante «Comincia una partita nuova» di Gioca: riapriva la partita lasciata a metà invece di prepararne una nuova.
-- Verifica in `VERIFICA-3.33.md` (nei sorgenti).
-
-## Versione 3.32 (14 novembre 2026)
-- **Nuova famiglia «Codici segreti»**, con due giochi nuovi. In tutto i giochi ora sono 27.
-  - **Messaggi cifrati**: un proverbio nascosto con un cifrario storico. Sotto ogni simbolo si scrive la lettera: nei cifrari a sostituzione, scrivendone una si riempiono tutte le uguali. I livelli vanno dalle lettere in numeri e da Cesare con la chiave fino alla sostituzione segreta, che si risolve con le frequenze. I cifrari sono otto: lettere in numeri (A=1), Cesare, Atbash, scacchiera di Polibio, cifrario dei Templari (massonico), Vigenère, cifrario a binari, sostituzione segreta.
-  - **Codice Morse**: punti e linee da leggere, da ascoltare (🔊) e da vedere lampeggiare (💡). Si va da una parola breve con lettere facili fino a un proverbio solo da ascoltare.
-  - In Crea si scrive un proprio messaggio, si sceglie il cifrario e la chiave, quante lettere dare come aiuto e se mettere la chiave sul foglio. Si stampano il foglio, la chiave per chi conduce e la soluzione, oppure si manda il link da decifrare.
-  - Nel percorso Impara: Cesare e Atbash, Polibio e i simboli, Vigenère e l'analisi delle frequenze (al-Kindi), la storia del Morse.
-- Verifica in `VERIFICA-3.32.md` (nei sorgenti).
-
-## Versione 3.31 (14 novembre 2026)
-- **⬇ Installa l'app**: un pulsante nell'intestazione, su ogni pagina.
-  - Dove il browser lo permette (Chrome, Edge, Android) l'installazione parte subito.
-  - Su iPhone, iPad, Safari per Mac e Firefox il pulsante mostra i passi giusti per quel dispositivo.
-  - Il pulsante non compare quando l'app è già installata.
-- **Esporta e importa un gioco.**
-  - In ogni strumento di Crea, «Esporta questo gioco» salva un piccolo file da mandare per email o WhatsApp; sul telefono si apre direttamente la condivisione.
-  - «Importa un gioco» (in Crea, in Gioca e in I miei lavori) lo apre e lo salva nei lavori.
-  - In ogni partita di Gioca, «Esporta la partita» salva la partita in un file.
-- **Gioca con altri.**
-  - «Sfida qualcuno» manda la stessa partita ad altre persone, con il proprio tempo se l'hai già risolta: ognuno la risolve sul suo dispositivo.
-  - Nel **Memory** si gioca anche **a turno sullo stesso dispositivo**, da 2 a 4 giocatori, ognuno con il suo nome e il suo punteggio. Chi trova una coppia la tiene e gioca ancora; chi sbaglia passa il turno.
-  - Giocare nello stesso momento da telefoni diversi non è possibile, perché servirebbe un server e l'app non invia dati a nessuno. La guida lo spiega.
-- Verifica in `VERIFICA-3.31.md` (nei sorgenti).
-
-## Versione 3.30 (9 novembre 2026)
-- Preparazione alla versione inglese, che starà nella cartella `/en` dello stesso sito: l'app italiana non cancella più le copie salvate della versione inglese e non gestisce le sue pagine. Nient'altro cambia. Verifica in fondo a `VERIFICA-3.29.md`.
+## Versioni dalla 3.30 alla 3.51 (riassunto)
+- **3.51 (19 novembre)** – Avventura a dadi: controllo completo delle storie scritte in Crea; il gioco si ferma se sullo schermo comparirebbe «NaN» o «undefined». Corretti lavori veri rifiutati per errore in circa 12 giochi; Crittografato, Condividi, Percorso dei numeri e «Indizi minimi» dell'Hexadoku resi più solidi.
+- **3.50 (18 novembre)** – Schema dei dati per ogni gioco (tipi e campi obbligatori) per i file e i link ricevuti; titolo e dedica solo testo. Corretti i link di Domino, Kim, Sequenze e Blocchi di Corsi creati in Crea.
+- **3.49 (18 novembre)** – Controllo di coerenza fra i campi dei giochi ricevuti (per esempio il Percorso dei numeri da 5 a 100 caselle).
+- **3.48 (18 novembre)** – Limiti per ogni gioco e campo nei file e nei link ricevuti: niente più blocchi con numeri assurdi.
+- **3.47 (17 novembre)** – Prova d'uso all'importazione e avviso in caso di errore imprevisto.
+- **3.46 (17 novembre)** – Passi di installazione su iPhone e iPad aggiornati a iOS 26.
+- **3.45 (17 novembre)** – File incompleti o rovinati: l'app li rifiuta oppure li apre senza bloccarsi.
+- **3.44 (17 novembre)** – Filtro unico per file, testi, link e partite ricevuti; «Cancella tutto da questo dispositivo» e guida per i dispositivi condivisi; dizionario salvato all'installazione; percorso dei numeri adatto al telefono; aiuti che spiegano il perché.
+- **3.43 (17 novembre)** – «Sfide: meno indizi possibile»; guida «Plusdotazione e doppia eccezionalità».
+- **3.42 (17 novembre)** – Tombola dei numeri e Domino dei numeri; «Un minuto per respirare»; guida «Usare AttivaMente con un gruppo»; tolta la vendita su Amazon da «Crea un libretto».
+- **3.41 (17 novembre)** – Percorso dei numeri; «Aiuto: una mossa» in 10 giochi; profili Lettura facile e Attenzione; guida «DSA, ADHD, BES e altri bisogni».
+- **3.37–3.40 (15–16 novembre)** – Per ogni gioco un esempio completo passo passo e un esercizio («Fai l'esercizio»); figure descritte per i lettori di schermo; aree di tocco più grandi.
+- **3.34–3.36 (14 novembre)** – Caratteri dentro la pagina; «Inventa un gioco» e «Cambia le regole»; regole in più per sudoku, Futoshiki, Suguru e Dama.
+- **3.31–3.33 (14 novembre)** – «Installa l'app»; esporta e importa partite; «Sfida qualcuno»; Memory a turno; Codici segreti (Messaggi cifrati, Codice Morse); Avventura a dadi.
+- **3.30 (9 novembre)** – Il service worker italiano non tocca la futura versione inglese in /en.
 
 ## Versione 3.29 (9 novembre 2026)
 - **Disegno con la griglia, come nel Rinascimento.** Il modello da copiare ora è l'opera vera, divisa in quadretti, e non più un disegno a contorni ricavato dall'immagine. Si può stampare in bianco e nero, con più contrasto. Accanto c'è la griglia vuota, anche più grande su un foglio a parte, per ingrandire il disegno. I quadretti in larghezza vanno da 3 a 12.
@@ -326,8 +252,7 @@ Sedici strumenti, uno per ogni gioco del corso. In ognuno: Controlla, Annulla e 
 - Funziona senza connessione dopo la prima apertura; nessun dato lascia il dispositivo
 
 ## Come pubblicarla su GitHub Pages
-1. Crea un nuovo repository pubblico su GitHub, per esempio `attivamente`.
-2. Carica tutti i file di questa cartella, compresa la cartella `dizionario` (index.html, manifest.webmanifest, sw.js, icon.svg, dizionario/).
-3. Vai in Settings → Pages, scegli "Deploy from a branch", ramo `main`, cartella `/ (root)`, e salva.
-4. Dopo un paio di minuti l'app sarà online all'indirizzo `https://NOMEUTENTE.github.io/attivamente/`.
-5. Da quell'indirizzo si crea il QR code per il corso.
+1. Nel repository `attivamente` su GitHub sostituisci i file con quelli di questa cartella, compresa la cartella `dizionario` (index.html, sw.js, manifest.webmanifest, icon.svg, LEGGIMI.md, dizionario/).
+2. In Settings → Pages controlla che sia scelto "Deploy from a branch", ramo `main`, cartella `/ (root)`.
+3. Dopo un paio di minuti l'app aggiornata è online all'indirizzo `https://NOMEUTENTE.github.io/attivamente/`. Chi aveva una versione vecchia vede la nuova dopo due o tre aperture, oppure subito con Ctrl+Maiusc+R.
+4. Da quell'indirizzo si crea il QR code per il corso.

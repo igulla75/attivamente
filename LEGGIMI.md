@@ -1,15 +1,30 @@
-# AttivaMente – Il laboratorio dei giochi da creare
+# Giocogonia – Dove nascono i giochi
+
+(Fino alla versione 3.52 l'app si chiamava AttivaMente.)
 
 App web gratuita che accompagna il libro e il corso. Funziona su telefono, tablet e computer, si può installare come un'icona e lavora anche senza connessione. Nessun account, nessun dato inviato: tutto resta sul dispositivo (dalla 3.34 anche i caratteri sono dentro la pagina, senza richieste a servizi esterni).
 
-## Che cosa contiene questa cartella (versione 3.52)
-- `index.html` – l'app completa (versione 3.52, 24 novembre 2026)
-- `sw.js` – funzionamento senza connessione (cache v72; dizionario in una cache separata)
-- `VERIFICA-3.52.md` – il collaudo di questa versione
+## Che cosa contiene questa cartella (versione 3.54)
+- `index.html` – l'app completa (versione 3.54, 28 novembre 2026)
+- `sw.js` – funzionamento senza connessione (cache giocogonia-v74; dizionario in una cache separata)
+- `VERIFICA-3.54.md` – il collaudo di questa versione (quelli della 3.52 e 3.53 sono nello zip delle prove)
 - `manifest.webmanifest`, `icon.svg` – installazione come app
 - `dizionario/` – parole italiane per i giochi di parole, con la licenza
 
 Nota del 24 novembre 2026: la 3.52 parte dalla copia della 3.51 pubblicata su claude.ai il 19 novembre. Il dizionario è identico a quella copia (impronte SHA-256 controllate); `index.html` è quella copia con le sole correzioni della 3.52, applicate dallo script `patch352.py` (nello zip delle prove). `sw.js` è stato riscritto seguendo le note di lavoro della 3.44–3.51, perché il file originale della 3.51 non è stato ritrovato. I sorgenti separati (src/, tools/, tests/) e i file VERIFICA-3.30…3.51 non sono stati ritrovati.
+
+## Versione 3.54 (28 novembre 2026)
+- **Italiano:** nel Percorso dei numeri la regola 4 usava il condizionale dopo «se» («se il dado ti porterebbe…»): ora è «se il dado ti portasse oltre l'ultima casella, ti fermeresti sull'ultima». Stesso errore corretto nell'aiuto del Sudoku («toglie un simbolo solo se la soluzione resta unica»).
+- **Più chiara la regola 5 del Percorso dei numeri:** se il computer arriva prima ha vinto lui, ma chi gioca continua fino in fondo. Il gioco funzionava già così; è cambiata solo la spiegazione.
+- **Pagina Crea:** le etichette verdi e arancioni sugli studi possono andare a capo. Prima, con un testo lungo (per esempio nel Percorso dei numeri), uscivano dal bordo della scheda; a 1024 pixel di larghezza succedeva in 8 schede.
+- Verifica in `VERIFICA-3.54.md`.
+
+## Versione 3.53 (24 novembre 2026)
+- **Nuovo nome: Giocogonia.** Il nome unisce *gioco* e *-gonia* (dal greco, «nascita, origine», come in cosmogonia): il posto dove nascono i giochi. Il vecchio nome risultava già registrato come marchio da altri, anche per giochi, software e formazione.
+- I lavori salvati restano: l'archivio interno nel browser non cambia nome. I file e i link esportati con AttivaMente si aprono ancora.
+- Il vecchio indirizzo porta da solo al nuovo, conservando i giochi ricevuti con un link (cartella `vecchio-indirizzo`, vedi sotto).
+- Corretto: in Unisci i puntini e Pentamini un foglio svuotato, esportato e reimportato, veniva rifiutato.
+- Verifica in `VERIFICA-3.53.md`.
 
 ## Versione 3.52 (24 novembre 2026)
 - **Privacy:** un file o un link ricevuto non può più far scaricare immagini da internet (prima poteva, per esempio con le foto del Memory). Restano ammesse solo le foto incluse nel file.
@@ -18,7 +33,7 @@ Nota del 24 novembre 2026: la 3.52 parte dalla copia della 3.51 pubblicata su cl
 - Verifica in `VERIFICA-3.52.md`.
 
 ## Versioni dalla 3.30 alla 3.51 (riassunto)
-- **3.51 (19 novembre)** – Avventura a dadi: controllo completo delle storie scritte in Crea; il gioco si ferma se sullo schermo comparirebbe «NaN» o «undefined». Corretti lavori veri rifiutati per errore in circa 12 giochi; Crittografato, Condividi, Percorso dei numeri e «Indizi minimi» dell'Hexadoku resi più solidi.
+- **3.51 (19 novembre)** – Avventura a dadi: controllo completo delle storie scritte in Crea; il gioco si ferma se sullo schermo dovesse comparire «NaN» o «undefined». Corretti lavori veri rifiutati per errore in circa 12 giochi; Crittografato, Condividi, Percorso dei numeri e «Indizi minimi» dell'Hexadoku resi più solidi.
 - **3.50 (18 novembre)** – Schema dei dati per ogni gioco (tipi e campi obbligatori) per i file e i link ricevuti; titolo e dedica solo testo. Corretti i link di Domino, Kim, Sequenze e Blocchi di Corsi creati in Crea.
 - **3.49 (18 novembre)** – Controllo di coerenza fra i campi dei giochi ricevuti (per esempio il Percorso dei numeri da 5 a 100 caselle).
 - **3.48 (18 novembre)** – Limiti per ogni gioco e campo nei file e nei link ricevuti: niente più blocchi con numeri assurdi.
@@ -252,7 +267,8 @@ Sedici strumenti, uno per ogni gioco del corso. In ognuno: Controlla, Annulla e 
 - Funziona senza connessione dopo la prima apertura; nessun dato lascia il dispositivo
 
 ## Come pubblicarla su GitHub Pages
-1. Nel repository `attivamente` su GitHub sostituisci i file con quelli di questa cartella, compresa la cartella `dizionario` (index.html, sw.js, manifest.webmanifest, icon.svg, LEGGIMI.md, dizionario/).
-2. In Settings → Pages controlla che sia scelto "Deploy from a branch", ramo `main`, cartella `/ (root)`.
-3. Dopo un paio di minuti l'app aggiornata è online all'indirizzo `https://NOMEUTENTE.github.io/attivamente/`. Chi aveva una versione vecchia vede la nuova dopo due o tre aperture, oppure subito con Ctrl+Maiusc+R.
-4. Da quell'indirizzo si crea il QR code per il corso.
+Attenzione: se si rinomina il repository `attivamente`, GitHub **non** reindirizza il vecchio indirizzo della pagina, e i QR e i link già diffusi smetterebbero di funzionare. Per questo:
+1. **Crea un nuovo repository pubblico** chiamato `giocogonia` e carica tutti i file di questa cartella, compresa la cartella `dizionario` (index.html, sw.js, manifest.webmanifest, icon.svg, LEGGIMI.md, VERIFICA-3.54.md, dizionario/).
+2. In Settings → Pages scegli "Deploy from a branch", ramo `main`, cartella `/ (root)`, e salva. Dopo un paio di minuti l'app è online a `https://NOMEUTENTE.github.io/giocogonia/`.
+3. **Nel vecchio repository `attivamente`** cancella i file dell'app e carica solo i due file della cartella `vecchio-indirizzo` (index.html e sw.js). Chi apre il vecchio indirizzo, o un vecchio link di gioco, viene portato alla nuova app; le copie salvate della vecchia app vengono cancellate dai dispositivi, quelle di Giocogonia no.
+4. Crea il nuovo QR code dall'indirizzo `https://NOMEUTENTE.github.io/giocogonia/`.

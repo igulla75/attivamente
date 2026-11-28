@@ -2177,7 +2177,7 @@ var FAMILIES = [
   { name:'Disegno e spazio', hint:'non serve leggere né contare', tools:[
     { id:'labirinti', name:'Labirinti', ev:'plausibile', text:'Disegna il percorso su una griglia: l’app controlla che ci sia una strada fino all’uscita.' },
     { id:'differenze', name:'Trova le differenze', ev:'plausibile', text:'Disegni una scena, l’app la copia: tu cambi qualche particolare.' },
-    { id:'puntini', name:'Unisci i puntini', ev:'plausibile', text:'Metti i punti in ordine: l’app li numera e controlla la figura.' },
+    { id:'puntini', name:'Unisci i puntini', ev:'plausibile', text:'Disegna la figura o ricavala da una foto o da un’opera d’arte: l’app mette i punti, li numera e controlla.' },
     { id:'tangram', name:'Tangram', ev:'plausibile', text:'Componi una figura con i sette pezzi e stampala come sagoma da riempire.' }, ]},
   { name:'Memoria e attenzione', hint:'giochi brevi, da fare anche ogni giorno', tools:[
     { id:'memory', name:'Memory', ev:'plausibile', text:'Carte con parole, disegni o le tue foto, da stampare e ritagliare.' },
@@ -2286,7 +2286,7 @@ function renderHome(){
     });
     html += '</div></section>';
   });
-  html += '</div><p class="note">Le etichette (studi controllati, studi preliminari, per analogia) dicono che tipo di studi esiste oggi su ciascun tipo di gioco. Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). Giocogonia versione 3.54.</p>';
+  html += '</div><p class="note">Le etichette (studi controllati, studi preliminari, per analogia) dicono che tipo di studi esiste oggi su ciascun tipo di gioco. Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). Giocogonia versione 3.55.</p>';
   app.innerHTML = html;
 }
 
@@ -9436,21 +9436,197 @@ function resample(a, k){ if(a.length<2) return a.slice(); var L=len(a), step=L/M
   // aggancia gli spigoli al punto più vicino, così la figura resta riconoscibile
   cpts.forEach(function(c){ var bi=0, bd=1e9; out.forEach(function(p,j){ var dd=Math.hypot(p[0]-c[0],p[1]-c[1]); if(dd<bd){ bd=dd; bi=j; } }); if(bi>0 && bi<out.length-1) out[bi]=c.slice(); });
   return out.map(function(p){ return [Math.round(p[0]),Math.round(p[1])]; }); }
+// 3.55: CONTORNO DALL'IMMAGINE. L'immagine (foto, disegno, opera libera da diritti) viene ridotta a una griglia
+// di G×G quadratini disposta come sul foglio (1000×1000, adattata senza deformarla), resa in toni di grigio e
+// sfocata appena; la soglia fra chiaro e scuro si calcola con il metodo di Otsu (si può spostare con il cursore).
+// Delle zone scure (o chiare, se la figura è chiara su fondo scuro) si seguono i bordi lungo i lati dei quadratini:
+// ogni zona dà un contorno esterno e, se ci sono, i contorni dei suoi buchi. Le linee si ammorbidiscono, si
+// semplificano (Ramer-Douglas-Peucker) e diventano le parti della figura. Tutto avviene sul dispositivo.
+var AUTOPT={ det:'2', inv:false, bias:0, mode:'linee', kind:'disegno' };
+var AUTODET={ '1':{ K:1, holes:0, minA:0.02, win:3, eps:1.6 }, '2':{ K:6, holes:0.006, minA:0.004, win:2, eps:1.1 }, '3':{ K:24, holes:0.0012, minA:0.0008, win:1, eps:0.8 } };
+function autoFig(url, opt, cb){ var im=new Image();
+  im.onerror=function(){ cb(null,'Non riesco a leggere questa immagine.'); };
+  im.onload=function(){ try{
+    var G=280, c=document.createElement('canvas'); c.width=c.height=G; var g=c.getContext('2d');
+    g.fillStyle='#ffffff'; g.fillRect(0,0,G,G);
+    var s=Math.min(G/im.width,G/im.height), w=im.width*s, h=im.height*s, ox=(G-w)/2, oy=(G-h)/2; g.drawImage(im,ox,oy,w,h);
+    var D=g.getImageData(0,0,G,G).data, N=G*G, L=new Float32Array(N), i, x, y;
+    for(i=0;i<N;i++) L[i]=0.299*D[4*i]+0.587*D[4*i+1]+0.114*D[4*i+2];
+    for(var pass=0;pass<2;pass++){ var M=new Float32Array(N); for(y=0;y<G;y++) for(x=0;x<G;x++){ var sm=0, ct=0; for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++){ var xx=x+dx, yy=y+dy; if(xx>=0&&yy>=0&&xx<G&&yy<G){ sm+=L[yy*G+xx]; ct++; } } M[y*G+x]=sm/ct; } L=M; }
+    var x0=Math.max(0,Math.ceil(ox)), x1=Math.min(G,Math.floor(ox+w)), y0=Math.max(0,Math.ceil(oy)), y1=Math.min(G,Math.floor(oy+h));
+    var hist=[], tot=0, sumAll=0; for(i=0;i<256;i++) hist.push(0);
+    for(y=y0;y<y1;y++) for(x=x0;x<x1;x++){ var v=Math.max(0,Math.min(255,Math.round(L[y*G+x]))); hist[v]++; tot++; sumAll+=v; }
+    if(!tot){ cb(null,'L’immagine è vuota.'); return; }
+    var sB=0, wB=0, best=-1, thr=128; for(i=0;i<256;i++){ wB+=hist[i]; if(!wB) continue; var wF=tot-wB; if(!wF) break; sB+=i*hist[i]; var mB=sB/wB, mF=(sumAll-sB)/wF, vv=wB*wF*(mB-mF)*(mB-mF); if(vv>best){ best=vv; thr=i; } }
+    thr=Math.max(0,Math.min(255,thr+(+opt.bias||0)));
+    var on=new Uint8Array(N), area=0; for(y=y0;y<y1;y++) for(x=x0;x<x1;x++){ var dark=L[y*G+x]<=thr; if(opt.inv?!dark:dark){ on[y*G+x]=1; area++; } }
+    var P=AUTODET[opt.det]||AUTODET['2'];
+    // zone (4 vicini)
+    var lab=new Int32Array(N).fill(-1), zones=[];
+    for(var p0=0;p0<N;p0++){ if(!on[p0]||lab[p0]>=0) continue; var id=zones.length, st=[p0], n=0; lab[p0]=id;
+      while(st.length){ var q=st.pop(), qx=q%G, qy=(q/G)|0; n++;
+        if(qx>0 && on[q-1] && lab[q-1]<0){ lab[q-1]=id; st.push(q-1); } if(qx<G-1 && on[q+1] && lab[q+1]<0){ lab[q+1]=id; st.push(q+1); }
+        if(qy>0 && on[q-G] && lab[q-G]<0){ lab[q-G]=id; st.push(q-G); } if(qy<G-1 && on[q+G] && lab[q+G]<0){ lab[q+G]=id; st.push(q+G); } }
+      zones.push({ id:id, n:n }); }
+    var A=tot; zones=zones.filter(function(z){ return z.n>=P.minA*A; }).sort(function(a,b){ return b.n-a.n; }).slice(0,P.K);
+    // bordi di una zona: lati dei quadratini fra dentro e fuori, concatenati in giri chiusi
+    function loops(id){ var nxt={}, key=function(a,b){ return a*(G+2)+b; };
+      function add(ax,ay,bx,by){ var k=key(ax,ay); (nxt[k]=nxt[k]||[]).push([bx,by]); }
+      for(var yy=0;yy<G;yy++) for(var xx=0;xx<G;xx++){ var pp=yy*G+xx; if(lab[pp]!==id) continue;
+        var up=yy>0 && lab[pp-G]===id, dn=yy<G-1 && lab[pp+G]===id, lf=xx>0 && lab[pp-1]===id, rt=xx<G-1 && lab[pp+1]===id;
+        if(!up) add(xx+1,yy,xx,yy); if(!lf) add(xx,yy,xx,yy+1); if(!dn) add(xx,yy+1,xx+1,yy+1); if(!rt) add(xx+1,yy+1,xx+1,yy); }
+      var out=[];
+      Object.keys(nxt).forEach(function(k0){ var safe=0; while(nxt[k0] && nxt[k0].length && safe++<100000){ var sx=Math.floor(+k0/(G+2)), sy=+k0%(G+2), cur=[sx,sy], loop=[cur], guard=0;
+          while(guard++<8*N){ var kk=key(cur[0],cur[1]), lst=nxt[kk]; if(!lst||!lst.length) break; var nx=lst.pop(); cur=nx; if(cur[0]===sx && cur[1]===sy) break; loop.push(cur); }
+          if(guard>=8*N) break;
+          if(loop.length>=4) out.push(loop); } });
+      return out; }
+    function areaOf(a){ var s2=0; for(var j=0;j<a.length;j++){ var u=a[j], v2=a[(j+1)%a.length]; s2+=u[0]*v2[1]-v2[0]*u[1]; } return Math.abs(s2)/2; }
+    function smooth(a,wn){ if(wn<1) return a; var n2=a.length, o=[]; for(var j=0;j<n2;j++){ var sx2=0, sy2=0; for(var k=-wn;k<=wn;k++){ var u=a[(j+k+n2)%n2]; sx2+=u[0]; sy2+=u[1]; } o.push([sx2/(2*wn+1), sy2/(2*wn+1)]); } return o; }
+    function rdp(a,eps){ if(a.length<3) return a.slice(); var keep=new Uint8Array(a.length); keep[0]=keep[a.length-1]=1; var stk=[[0,a.length-1]];
+      while(stk.length){ var se=stk.pop(), s0=se[0], e0=se[1], dm=0, di=-1, A0=a[s0], B0=a[e0], vx=B0[0]-A0[0], vy=B0[1]-A0[1], ln=Math.hypot(vx,vy)||1e-9;
+        for(var j=s0+1;j<e0;j++){ var dd=Math.abs(vx*(A0[1]-a[j][1])-(A0[0]-a[j][0])*vy)/ln; if(dd>dm){ dm=dd; di=j; } }
+        if(dm>eps && di>0){ keep[di]=1; stk.push([s0,di]); stk.push([di,e0]); } }
+      return a.filter(function(_,j){ return keep[j]; }); }
+    var k1=1000/G, strokes=[];
+    zones.forEach(function(z){ var ls=loops(z.id).map(function(l){ return { l:l, a:areaOf(l) }; }).sort(function(a,b){ return b.a-a.a; });
+      ls.forEach(function(o,j){ if(j>0 && (!P.holes || o.a<P.holes*A)) return;
+        if(j>0 && o.a>0.6*ls[0].a) return; // figura fatta di una linea sottile: il bordo interno ripeterebbe quello esterno
+        var sm2=smooth(o.l,P.win), half=Math.floor(sm2.length/2), r1=rdp(sm2.slice(0,half+1),P.eps), r2=rdp(sm2.slice(half),P.eps);
+        var pts=r1.concat(r2.slice(1)); pts=pts.map(function(u){ return [Math.round(Math.max(0,Math.min(1000,u[0]*k1))), Math.round(Math.max(0,Math.min(1000,u[1]*k1)))]; });
+        if(pts.length>=3){ pts.push(pts[0].slice()); strokes.push(pts); } }); });
+    cb(strokes, null, { thr:thr, cover:area/A, zones:zones.length });
+  }catch(e){ cb(null,'Non sono riuscita a ricavare il contorno da questa immagine.'); } };
+  im.src=url; }
+// 3.55: LINEE DEL DISEGNO, PUNTI SUGLI ANGOLI. Per disegni, incisioni e opere: invece dei bordi delle zone scure si
+// cercano le LINEE (nei disegni i tratti più scuri dei dintorni; nelle foto e nei dipinti i bordi, dove la luce
+// cambia di colpo), si assottigliano a un quadratino (Zhang-Suen) e si seguono. I punti vanno sugli angoli: la linea
+// si semplifica (Ramer-Douglas-Peucker) quanto basta per avere il numero di puntini scelto; dove è dritta ne bastano
+// due, nei particolari si infittiscono. Le parti si ordinano in modo che la successiva cominci vicino alla precedente.
+var LINDET={ '1':{ C:20, q:0.06, minL:80, maxP:20 }, '2':{ C:14, q:0.10, minL:40, maxP:50 }, '3':{ C:9, q:0.15, minL:20, maxP:120 } };
+function rdpO(a,eps){ if(a.length<3) return a.slice(); var keep=new Uint8Array(a.length); keep[0]=keep[a.length-1]=1; var stk=[[0,a.length-1]];
+  while(stk.length){ var se=stk.pop(), s0=se[0], e0=se[1], dm=0, di=-1, A0=a[s0], B0=a[e0], vx=B0[0]-A0[0], vy=B0[1]-A0[1], ln=Math.hypot(vx,vy);
+    for(var j=s0+1;j<e0;j++){ var dd= ln ? Math.abs(vx*(A0[1]-a[j][1])-(A0[0]-a[j][0])*vy)/ln : Math.hypot(a[j][0]-A0[0],a[j][1]-A0[1]); if(dd>dm){ dm=dd; di=j; } }
+    if(dm>eps && di>0){ keep[di]=1; stk.push([s0,di]); stk.push([di,e0]); } }
+  return a.filter(function(_,j){ return keep[j]; }); }
+function isClosed(st){ return st.length>3 && Math.hypot(st[0][0]-st[st.length-1][0],st[0][1]-st[st.length-1][1])<20; }
+function vtxRun(fig, eps){ var out=[];
+  fig.forEach(function(st){ if(st.length<2) return; var cl=isClosed(st), r;
+    if(cl){ var h=Math.floor(st.length/2); r=rdpO(st.slice(0,h+1),eps).concat(rdpO(st.slice(h),eps).slice(1)); } else r=rdpO(st,eps);
+    var q=[r[0]]; for(var i=1;i<r.length;i++){ var u=q[q.length-1]; if(Math.hypot(r[i][0]-u[0],r[i][1]-u[1])>=22) q.push(r[i]); else if(i===r.length-1 && !cl && q.length>1) q[q.length-1]=r[i]; }
+    if(cl && q.length>3 && Math.hypot(q[0][0]-q[q.length-1][0],q[0][1]-q[q.length-1][1])<22) q.pop();
+    if(q.length>=2) out.push({ p:q, closed:cl && q.length>=3 }); });
+  return out; }
+function vtxCount(o){ return o.reduce(function(s,x){ return s+x.p.length; },0); }
+// Se due numeri non vicini sulla linea finiscono troppo vicini sul foglio (a una distanza minore di quella che
+// «Controlla» segnala), si toglie uno dei due punti, finché non ce ne sono più. Ogni parte tiene almeno 2 punti (3 se chiusa).
+function vtxSpace(o, lim){ var P=[]; o.forEach(function(sx,k){ sx.p.forEach(function(u,j){ P.push({u:u,k:k,j:j}); }); });
+  var cnt=o.map(function(sx){ return sx.p.length; }), dead=new Uint8Array(P.length), guard=0;
+  function nb(a,b){ var A=P[a], B=P[b]; if(A.k!==B.k) return false; if(Math.abs(A.j-B.j)===1) return true;
+    if(o[A.k].closed){ var J=[], q; for(q=0;q<P.length;q++) if(!dead[q] && P[q].k===A.k) J.push(q); return (a===J[0]&&b===J[J.length-1])||(b===J[0]&&a===J[J.length-1]); } return false; }
+  // quanto cambierebbe la figura togliendo il punto q: distanza dalla retta fra il punto prima e quello dopo
+  // (per l'estremo di una linea aperta, il pezzo di linea che si perderebbe)
+  function cost(q){ var k=P[q].k, J=[], r; for(r=0;r<P.length;r++) if(!dead[r] && P[r].k===k) J.push(r);
+    var x=J.indexOf(q), L=J.length, A, B, U=P[q].u;
+    if(o[k].closed){ A=P[J[(x-1+L)%L]].u; B=P[J[(x+1)%L]].u; }
+    else { if(x===0) return Math.hypot(U[0]-P[J[1]].u[0],U[1]-P[J[1]].u[1]); if(x===L-1) return Math.hypot(U[0]-P[J[L-2]].u[0],U[1]-P[J[L-2]].u[1]); A=P[J[x-1]].u; B=P[J[x+1]].u; }
+    var vx=B[0]-A[0], vy=B[1]-A[1], ln=Math.hypot(vx,vy); return ln ? Math.abs(vx*(A[1]-U[1])-(A[0]-U[0])*vy)/ln : Math.hypot(U[0]-A[0],U[1]-A[1]); }
+  var go=true; while(go && guard++<2000){ go=false; var alive=[], i, j; for(i=0;i<P.length;i++) if(!dead[i]) alive.push(i);
+    outer: for(i=0;i<alive.length;i++) for(j=i+2;j<alive.length;j++){ if(i===0 && j===alive.length-1) continue; var a=alive[i], b=alive[j];
+      if(P[a].k===P[b].k && o[P[a].k].closed && nb(a,b)) continue;
+      if(Math.hypot(P[a].u[0]-P[b].u[0],P[a].u[1]-P[b].u[1])>=lim) continue;
+      var okb=cnt[P[b].k]>(o[P[b].k].closed?3:2), oka=cnt[P[a].k]>(o[P[a].k].closed?3:2), v;
+      if(!oka && !okb) continue;
+      v = (okb && (!oka || cost(b)<=cost(a))) ? b : a;   // si toglie il punto che cambia meno la forma
+      dead[v]=1; cnt[P[v].k]--; go=true; break outer; } }
+  return o.map(function(sx,k){ return { p:P.filter(function(x,q){ return x.k===k && !dead[q]; }).map(function(x){ return x.u; }), closed:sx.closed }; }); }
+function vtxPts(fig, n, lim){ var m=n, o=null, c, best=null, bc=-1;
+  // la pulizia toglie alcuni punti: si chiede un po' di più finché il numero finale si avvicina a quello scelto
+  for(var it=0;it<6;it++){ o=vtxSpace(vtxPts0(fig, m), lim||28); c=vtxCount(o);
+    if(c<=n && c>bc){ best=o; bc=c; } if(c>=n || m>=4*n) break; m+=Math.max(1,n-c); }
+  return best || o; }
+function vtxPts0(fig, n){ var lo=0.3, hi=300, best=null;
+  for(var it=0;it<28;it++){ var mid=Math.sqrt(lo*hi), o=vtxRun(fig,mid); if(vtxCount(o)>n) lo=mid; else { hi=mid; best=o; } }
+  return best || vtxRun(fig,hi); }
+function lineFig(url, opt, cb){ var im=new Image();
+  im.onerror=function(){ cb(null,'Non riesco a leggere questa immagine.'); };
+  im.onload=function(){ try{
+    var G=400, N=G*G, c=document.createElement('canvas'); c.width=c.height=G; var g=c.getContext('2d');
+    g.fillStyle='#ffffff'; g.fillRect(0,0,G,G);
+    var s=Math.min(G/im.width,G/im.height), w=im.width*s, h=im.height*s, ox=(G-w)/2, oy=(G-h)/2; g.drawImage(im,ox,oy,w,h);
+    var D=g.getImageData(0,0,G,G).data, L=new Float32Array(N), i, x, y;
+    for(i=0;i<N;i++) L[i]=0.299*D[4*i]+0.587*D[4*i+1]+0.114*D[4*i+2];
+    function blur(A){ var M=new Float32Array(N); for(var yy=0;yy<G;yy++) for(var xx=0;xx<G;xx++){ var sm=0, ct=0; for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++){ var a=xx+dx, b=yy+dy; if(a>=0&&b>=0&&a<G&&b<G){ sm+=A[b*G+a]; ct++; } } M[yy*G+xx]=sm/ct; } return M; }
+    var x0=Math.max(1,Math.ceil(ox)), x1=Math.min(G-1,Math.floor(ox+w)), y0=Math.max(1,Math.ceil(oy)), y1=Math.min(G-1,Math.floor(oy+h));
+    var P=LINDET[opt.det]||LINDET['2'], on=new Uint8Array(N), B=blur(L);
+    if(opt.kind==='foto'){ var B2=blur(B), mag=new Float32Array(N), vals=[];
+      for(y=y0+1;y<y1-1;y++) for(x=x0+1;x<x1-1;x++){ var p=y*G+x, gx=B2[p-G+1]+2*B2[p+1]+B2[p+G+1]-B2[p-G-1]-2*B2[p-1]-B2[p+G-1], gy=B2[p+G-1]+2*B2[p+G]+B2[p+G+1]-B2[p-G-1]-2*B2[p-G]-B2[p-G+1]; mag[p]=Math.hypot(gx,gy); vals.push(mag[p]); }
+      if(!vals.length){ cb(null,'L’immagine è vuota.'); return; }
+      vals.sort(function(a,b){ return a-b; }); var thr=vals[Math.floor(vals.length*(1-P.q))]*(1-(+opt.bias||0)/150);
+      for(y=y0+1;y<y1-1;y++) for(x=x0+1;x<x1-1;x++){ var pp=y*G+x; if(mag[pp]>=thr && mag[pp]>8) on[pp]=1; } }
+    else { var I=new Float64Array((G+1)*(G+1)); for(y=0;y<G;y++){ var row=0; for(x=0;x<G;x++){ row+=B[y*G+x]; I[(y+1)*(G+1)+x+1]=I[y*(G+1)+x+1]+row; } }
+      var R=7, C=P.C-(+opt.bias||0)/3;
+      for(y=y0;y<y1;y++) for(x=x0;x<x1;x++){ var ax=Math.max(0,x-R), ay=Math.max(0,y-R), bx=Math.min(G,x+R+1), by=Math.min(G,y+R+1), area=(bx-ax)*(by-ay), mean=(I[by*(G+1)+bx]-I[ay*(G+1)+bx]-I[by*(G+1)+ax]+I[ay*(G+1)+ax])/area, v=B[y*G+x];
+        if(opt.inv ? (v>mean+C && v>40) : (v<mean-C && v<215)) on[y*G+x]=1; } }
+    // assottiglia (Zhang-Suen)
+    var ch=true, guard=0, del=[]; function at(xx,yy){ return (xx>=0&&yy>=0&&xx<G&&yy<G) ? on[yy*G+xx] : 0; }
+    while(ch && guard++<60){ ch=false;
+      for(var sub=0;sub<2;sub++){ del.length=0;
+        for(y=1;y<G-1;y++) for(x=1;x<G-1;x++){ if(!on[y*G+x]) continue;
+          var p2=at(x,y-1), p3=at(x+1,y-1), p4=at(x+1,y), p5=at(x+1,y+1), p6=at(x,y+1), p7=at(x-1,y+1), p8=at(x-1,y), p9=at(x-1,y-1);
+          var Bn=p2+p3+p4+p5+p6+p7+p8+p9; if(Bn<2||Bn>6) continue;
+          var Af=(!p2&&p3)+(!p3&&p4)+(!p4&&p5)+(!p5&&p6)+(!p6&&p7)+(!p7&&p8)+(!p8&&p9)+(!p9&&p2); if(Af!==1) continue;
+          if(sub===0 ? (p2*p4*p6===0 && p4*p6*p8===0) : (p2*p4*p8===0 && p2*p6*p8===0)) del.push(y*G+x); }
+        if(del.length){ ch=true; del.forEach(function(q){ on[q]=0; }); } } }
+    // segui le linee: prima dagli estremi, poi gli anelli
+    var vis=new Uint8Array(N), N4=[[1,0],[-1,0],[0,1],[0,-1]], N8=[[1,1],[1,-1],[-1,1],[-1,-1]];
+    function deg(p){ var xx=p%G, yy=(p/G)|0, n=0; N4.concat(N8).forEach(function(d){ if(at(xx+d[0],yy+d[1])) n++; }); return n; }
+    function next(p){ var xx=p%G, yy=(p/G)|0, k, q; for(k=0;k<4;k++){ q=(yy+N4[k][1])*G+xx+N4[k][0]; if(at(xx+N4[k][0],yy+N4[k][1]) && !vis[q]) return q; } for(k=0;k<4;k++){ q=(yy+N8[k][1])*G+xx+N8[k][0]; if(at(xx+N8[k][0],yy+N8[k][1]) && !vis[q]) return q; } return -1; }
+    var ends=[], rest=[]; for(i=0;i<N;i++) if(on[i]) (deg(i)===1?ends:rest).push(i);
+    var k1=1000/G, polys=[];
+    ends.concat(rest).forEach(function(s0){ if(vis[s0]) return; var line=[s0], cur=s0; vis[s0]=1;
+      while(true){ var nx=next(cur); if(nx<0) break; vis[nx]=1; line.push(nx); cur=nx; }
+      var pts=line.map(function(q){ return [(q%G+0.5)*k1, (((q/G)|0)+0.5)*k1]; });
+      var e=pts[pts.length-1]; if(pts.length>8 && Math.hypot(e[0]-pts[0][0],e[1]-pts[0][1])<=1.5*k1*1.5) pts.push(pts[0].slice());
+      var Ln=0; for(var j=1;j<pts.length;j++) Ln+=Math.hypot(pts[j][0]-pts[j-1][0],pts[j][1]-pts[j-1][1]);
+      if(Ln>=P.minL) polys.push({ p:rdpO(pts,1.2).map(function(u){ return [Math.round(Math.max(0,Math.min(1000,u[0]))),Math.round(Math.max(0,Math.min(1000,u[1])))]; }), L:Ln }); });
+    if(!polys.length){ cb(null,'Non ho trovato linee abbastanza lunghe.'); return; }
+    polys.sort(function(a,b){ return b.L-a.L; }); polys=polys.slice(0,P.maxP);
+    // ordine: dalla linea più vicina all'angolo in alto a sinistra, poi ogni volta la più vicina alla fine della precedente
+    var left=polys.map(function(o){ return o.p; }), out=[], end=[0,0];
+    while(left.length){ var bi=0, bd=1e18, rev=false;
+      left.forEach(function(st,j){ var d1=Math.hypot(st[0][0]-end[0],st[0][1]-end[1]), d2=Math.hypot(st[st.length-1][0]-end[0],st[st.length-1][1]-end[1]); if(d1<bd){ bd=d1; bi=j; rev=false; } if(!isClosed(st) && d2<bd){ bd=d2; bi=j; rev=true; } });
+      var st=left.splice(bi,1)[0]; if(rev) st=st.slice().reverse();
+      // se comincia dove finiva la precedente, è la stessa linea: niente matita alzata e niente numeri doppi
+      if(out.length && bd<16 && !isClosed(out[out.length-1]) && !isClosed(st)) out[out.length-1]=out[out.length-1].concat(st.slice(1)); else out.push(st);
+      end=st[st.length-1]; }
+    cb(out, null, { parts:out.length }); }catch(e){ cb(null,'Non sono riuscita a trovare le linee in questa immagine.'); } };
+  im.src=url; }
+function autoHTML(){ return '<div class="sub"><h4>Contorno automatico</h4><p class="evidence">Con una foto, un disegno o un’opera sotto il foglio, l’app può trovare da sola la figura. «Le linee del disegno» funziona meglio con disegni e incisioni: i punti vanno sugli angoli, come nei libri di unisci i puntini. «Il contorno delle sagome» segue i bordi delle parti scure.</p>'+
+  '<p class="label">Che cosa ricavare</p>'+seg('s-amode',[['zone','Il contorno delle sagome'],['linee','Le linee del disegno, punti sugli angoli']],AUTOPT.mode)+
+  '<div id="a-kind"><p class="label">Tipo di immagine</p>'+seg('s-kind',[['disegno','Disegno o incisione'],['foto','Foto o dipinto']],AUTOPT.kind)+'</div>'+
+  '<p class="label">Dettaglio</p>'+seg('s-det',[['1','Essenziale'],['2','Medio'],['3','Ricco']],AUTOPT.det)+
+  '<div class="row"><button class="btn primary" id="b-auto">Ricava il contorno dall’immagine</button></div>'+
+  '<label class="check"><input type="checkbox" id="c-inv"'+(AUTOPT.inv?' checked':'')+'> La figura è chiara su fondo scuro</label>'+
+  '<label class="label" for="r-bias">Quanto scuro deve essere ciò che conta: <b id="bias-lab"></b></label><input type="range" id="r-bias" min="-60" max="60" step="5">'+
+  '<div id="auto-msg" aria-live="polite"></div>'+
+  '<details class="imgsrc"><summary>Prendere un’opera da un museo</summary>'+((typeof ColoraView!=='undefined' && ColoraView.sources)?ColoraView.sources(true,'puntini'):'')+'</details></div>'; }
 var T=TOOLS.puntini={
   id:'puntini', title:'Unisci i puntini', defTitle:'Unisci i puntini', ev:'plausibile',
-  intro:'Prima disegni la figura, anche complessa, a mano libera, con linee dritte o ricalcando una foto messa sotto. Poi scegli quanti puntini vuoi: l’app li distribuisce lungo il contorno, tiene gli spigoli e li numera. Alla stampa restano solo i punti e i numeri.',
-  steps:['Se vuoi ricalcare, carica una foto: resta leggera sotto il foglio e non viene stampata.','Disegna il contorno: a mano libera o con linee dritte. Ogni tratto staccato diventa una parte nuova.','Passa a 2. Metti i puntini e scegli quanti: 15 per i più piccoli, fino a 300 per una sfida.','Sposta o togli i punti che non ti convincono.','Dove la matita va alzata, il numero ha una stellina.'],
+  intro:'Prima disegni la figura, anche complessa, a mano libera, con linee dritte o ricalcando una foto messa sotto; oppure lasci che l’app ricavi da sola il contorno da una foto, da un disegno o da un’opera d’arte libera da diritti. Poi scegli quanti puntini vuoi: l’app li distribuisce lungo il contorno, tiene gli spigoli e li numera. Alla stampa restano solo i punti e i numeri.',
+  steps:['Se vuoi ricalcare, carica una foto: resta leggera sotto il foglio e non viene stampata.','Disegna il contorno: a mano libera o con linee dritte. Ogni tratto staccato diventa una parte nuova. Oppure premi «Ricava il contorno dall’immagine» e scegli quanto dettaglio vuoi.','Passa a 2. Metti i puntini e scegli quanti: 15 per i più piccoli, fino a 500 per una grande sfida.','Sposta o togli i punti che non ti convincono.','Dove la matita va alzata, il numero ha una stellina.'],
   init:function(){ var d={ phase:'figura', fig:[[[300,800],[300,450],[500,250],[700,450],[700,800],[300,800]],[[360,500],[440,500],[440,580],[360,580],[360,500]]], photo:null, op:0.45, pen:'dritta', n:30, pts:[], breaks:[], big:true, mode:'sposta', sel:null }; T.make(d); return d; },
-  make:function(d){ var L=d.fig.map(len), tot=L.reduce(function(a,b){ return a+b; },0)||1, pts=[], br=[], cl=[];
+  make:function(d){ if(d.vtx){ var o=vtxPts(d.fig, d.n, d.big?40:28), pv=[], bv=[], cv=[]; o.forEach(function(sx){ if(pv.length) bv.push(pv.length); if(sx.closed) cv.push(pv.length); pv=pv.concat(sx.p.map(function(u){ return [Math.round(u[0]),Math.round(u[1])]; })); }); d.pts=pv; d.breaks=bv; d.closes=cv; d.sel=null; return; }
+    var L=d.fig.map(len), tot=L.reduce(function(a,b){ return a+b; },0)||1, pts=[], br=[], cl=[];
     d.fig.forEach(function(st,i){ if(st.length<2) return; var k=Math.max(2,Math.round(d.n*L[i]/tot)); if(pts.length) br.push(pts.length); var r=resample(st,k); var closed=Math.hypot(st[0][0]-st[st.length-1][0],st[0][1]-st[st.length-1][1])<20; if(closed && r.length>3){ r.pop(); cl.push(pts.length); } pts=pts.concat(r); });
     d.pts=pts; d.breaks=br; d.closes=cl; d.sel=null; },
   side:function(ctx){ var d=ctx.d;
     return '<div class="panel"><h3>A che punto sei</h3>'+seg('s-phase',[['figura','1. Disegna la figura'],['punti','2. Metti i puntini']],d.phase)+'</div>'+
       '<div class="panel" id="pf-fig"><h3>Figura</h3>'+seg('s-pen',[['libera','Mano libera'],['dritta','Linee dritte']],d.pen)+'<p class="evidence">Con Linee dritte: tocca un punto dopo l’altro; tocca di nuovo l’ultimo punto per staccare la matita.</p>'+
-      '<div class="row"><label class="btn" for="f-photo">Metti una foto sotto</label><input type="file" id="f-photo" accept="image/*" hidden><button class="btn" id="b-nophoto">Togli la foto</button><button class="btn" id="b-clrfig">Cancella la figura</button></div><label class="label" for="r-op">Trasparenza della foto</label><input type="range" id="r-op" min="0.1" max="0.9" step="0.05"></div>'+
-      '<div class="panel" id="pf-pts"><h3>Puntini</h3><label class="label" for="r-n">Quanti puntini: <b id="n-lab"></b></label><input type="range" id="r-n" min="8" max="300" step="1"><div class="row"><button class="btn primary" id="b-make">Distribuisci i puntini</button></div>'+
-      seg('s-mode',[['sposta','Sposta un punto'],['togli','Togli un punto']],d.mode)+'<label class="check"><input type="checkbox" id="c-big"'+(d.big?' checked':'')+'> Numeri grandi</label></div>'; },
-  syncSide:function(ctx){ var d=ctx.d; setSeg('s-phase',d.phase); setSeg('s-pen',d.pen); setSeg('s-mode',d.mode); $('r-n').value=d.n; $('n-lab').textContent=d.n; $('r-op').value=d.op; $('pf-fig').hidden=d.phase!=='figura'; $('pf-pts').hidden=d.phase!=='punti'; },
+      '<div class="row"><label class="btn" for="f-photo">Metti una foto sotto</label><input type="file" id="f-photo" accept="image/*" hidden><button class="btn" id="b-nophoto">Togli la foto</button><button class="btn" id="b-clrfig">Cancella la figura</button></div><label class="label" for="r-op">Trasparenza della foto</label><input type="range" id="r-op" min="0.1" max="0.9" step="0.05">'+autoHTML()+'</div>'+
+      '<div class="panel" id="pf-pts"><h3>Puntini</h3><label class="label" for="r-n">Quanti puntini: <b id="n-lab"></b></label><input type="range" id="r-n" min="8" max="500" step="1"><div class="row"><button class="btn primary" id="b-make">Distribuisci i puntini</button></div>'+
+      seg('s-mode',[['sposta','Sposta un punto'],['togli','Togli un punto']],d.mode)+'<label class="check"><input type="checkbox" id="c-vtx"'+(d.vtx?' checked':'')+'> Punti sugli angoli: dove la linea è dritta ne bastano pochi</label><label class="check"><input type="checkbox" id="c-big"'+(d.big?' checked':'')+'> Numeri grandi</label></div>'; },
+  syncSide:function(ctx){ var d=ctx.d; setSeg('s-phase',d.phase); setSeg('s-pen',d.pen); setSeg('s-mode',d.mode); $('r-n').value=d.n; $('n-lab').textContent=d.n; $('r-op').value=d.op; $('pf-fig').hidden=d.phase!=='figura'; $('pf-pts').hidden=d.phase!=='punti'; if($('c-vtx')) $('c-vtx').checked=!!d.vtx; },
   bind:function(ctx){ var d=ctx.d, cur=null, drag=null, line=null;
     T.syncSide(ctx);
     onSeg('s-phase', function(v){ ctx.change(function(){ d.phase=v; if(v==='punti' && !d.pts.length) T.make(d); line=null; }); T.syncSide(ctx); });
@@ -9461,8 +9637,31 @@ var T=TOOLS.puntini={
     $('b-make').onclick=function(){ ctx.change(function(){ T.make(d); }); };
     $('r-op').oninput=function(e){ d.op=+e.target.value; ctx.quiet(function(){}); };
     $('c-big').onchange=function(e){ ctx.change(function(){ d.big=e.target.checked; }); };
+    $('c-vtx').onchange=function(e){ ctx.change(function(){ d.vtx=e.target.checked; T.make(d); }); };
     $('b-nophoto').onclick=function(){ ctx.change(function(){ d.photo=null; }); };
     $('b-clrfig').onclick=function(){ ctx.change(function(){ d.fig=[]; d.pts=[]; d.breaks=[]; }); line=null; };
+    $('r-bias').value=AUTOPT.bias; $('bias-lab').textContent=AUTOPT.bias===0?'automatico':(AUTOPT.bias>0?'+'+AUTOPT.bias:AUTOPT.bias);
+    onSeg('s-det', function(v){ AUTOPT.det=v; });
+    onSeg('s-amode', function(v){ AUTOPT.mode=v; $('a-kind').hidden=v!=='linee'; });
+    onSeg('s-kind', function(v){ AUTOPT.kind=v; });
+    $('a-kind').hidden=AUTOPT.mode!=='linee';
+    $('c-inv').onchange=function(e){ AUTOPT.inv=e.target.checked; };
+    $('r-bias').oninput=function(e){ AUTOPT.bias=+e.target.value; $('bias-lab').textContent=AUTOPT.bias===0?'automatico':(AUTOPT.bias>0?'+'+AUTOPT.bias:AUTOPT.bias); };
+    $('b-auto').onclick=function(){ var msg=$('auto-msg');
+      if(!d.photo){ msg.innerHTML=warnMsg('Prima metti una foto sotto il foglio.','Usa il pulsante «Metti una foto sotto» e scegli l’immagine.'); return; }
+      msg.innerHTML='<p class="note">Sto cercando '+(AUTOPT.mode==='linee'?'le linee':'i contorni')+'…</p>';
+      if(AUTOPT.mode==='linee'){ setTimeout(function(){ lineFig(d.photo, AUTOPT, function(st, err){
+        if(!st || !st.length){ msg.innerHTML=warnMsg(err||'Non ho trovato linee.','Prova a cambiare il dettaglio, il tipo di immagine o il cursore «Quanto scuro…»; con una sagoma piena usa «Il contorno delle sagome».'); return; }
+        var sug=Math.max(8,Math.min(500,vtxCount(vtxSpace(vtxRun(st,4), d.big?40:28)))); sug=vtxCount(vtxPts(st, sug, d.big?40:28));
+        ctx.change(function(){ d.fig=st; d.vtx=true; d.n=sug; d.pts=[]; d.breaks=[]; d.closes=[]; }); line=null;
+        var m=$('auto-msg'); if(m) m.innerHTML=okMsg('Ho trovato '+st.length+(st.length===1?' linea':' linee')+'.','Ti propongo '+sug+' puntini, messi sugli angoli. Guarda il disegno: puoi cancellarlo e riprovare con un altro dettaglio, oppure aggiungere o togliere tratti a mano. Poi passa a «2. Metti i puntini».'); }); }, 30); return; }
+      autoFig(d.photo, AUTOPT, function(st, err, info){
+        if(!st || !st.length){ msg.innerHTML=warnMsg(err||'Non ho trovato contorni abbastanza grandi.','Prova a spostare il cursore «Quanto scuro…», a cambiare il dettaglio o a segnare «La figura è chiara su fondo scuro».'); return; }
+        // quanti puntini stanno lungo questo contorno con i numeri ancora leggibili: la stessa distanza usata da Controlla (40 con i numeri grandi, 28 con i piccoli) più un margine
+        var Ltot=st.reduce(function(s,a){ return s+len(a); },0), sug=Math.max(8,Math.min(500,Math.round(Ltot/(d.big?44:32))));
+        ctx.change(function(){ d.fig=st; d.vtx=false; d.pts=[]; d.breaks=[]; d.closes=[]; d.n=sug; }); line=null;
+        var m=$('auto-msg'); if(m) m.innerHTML=(info && info.cover>0.6 ? warnMsg('La parte scura copre quasi tutta l’immagine.','Forse la figura è chiara su fondo scuro: segna la casella e riprova.') : '')+okMsg('Ho trovato '+st.length+(st.length===1?' parte':' parti')+'.','Per questo contorno ti propongo '+sug+' puntini: con molti di più i numeri si sovrappongono. Guarda il disegno: puoi cancellare la figura e riprovare con un altro dettaglio, oppure aggiungere tratti a mano. Poi passa a «2. Metti i puntini».'); });
+    };
     $('f-photo').onchange=function(e){ var f=e.target.files[0]; if(!f) return; var rd=new FileReader(); rd.onload=function(){ var im=new Image(); im.onload=function(){ var c=document.createElement('canvas'), k=Math.min(1,1000/Math.max(im.width,im.height)); c.width=im.width*k; c.height=im.height*k; c.getContext('2d').drawImage(im,0,0,c.width,c.height); var url=c.toDataURL('image/jpeg',0.75); ctx.change(function(){ d.photo=url; }); }; im.src=rd.result; }; rd.readAsDataURL(f); };
     function P(e){ var p=ctx.svgPt(e); return p ? [Math.round(Math.max(0,Math.min(1000,p.x))), Math.round(Math.max(0,Math.min(1000,p.y)))] : null; }
     function near(p, lim){ var bi=-1, bd=lim; d.pts.forEach(function(q,i){ var dd=Math.hypot(q[0]-p[0],q[1]-p[1]); if(dd<bd){ bd=dd; bi=i; } }); return bi; }
@@ -9483,7 +9682,7 @@ var T=TOOLS.puntini={
   labelPos:function(d, i, fs, r, cx, cy){ var p=d.pts[i], a=d.pts[i-1]||p, b=d.pts[i+1]||p, dx=b[0]-a[0], dy=b[1]-a[1], n=Math.hypot(dx,dy)||1, nx=-dy/n, ny=dx/n;
     if((p[0]+nx-cx)*(p[0]-cx)+(p[1]+ny-cy)*(p[1]-cy) < (p[0]-cx)*(p[0]-cx)+(p[1]-cy)*(p[1]-cy)){ nx=-nx; ny=-ny; }
     if(!(nx||ny)){ nx=0.7; ny=-0.7; } var off=r+fs*0.55; return [p[0]+nx*off, p[1]+ny*off]; },
-  svg:function(ctx, mode){ var d=ctx.d, n=d.pts.length, fs=d.big?(n>120?22:n>60?28:36):(n>120?16:n>60?20:26), r=d.big?(n>120?5:8):(n>120?4:6), s='<svg class="main" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Punti numerati da unire">';
+  svg:function(ctx, mode){ var d=ctx.d, n=d.pts.length, fs=d.big?(n>300?17:n>120?22:n>60?28:36):(n>300?13:n>120?16:n>60?20:26), r=d.big?(n>300?4:n>120?5:8):(n>300?3:n>120?4:6), s='<svg class="main" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Punti numerati da unire">';
     if(mode!=='print' && mode!=='sol' && d.photo) s+='<image href="'+d.photo+'" x="0" y="0" width="1000" height="1000" preserveAspectRatio="xMidYMid meet" opacity="'+d.op+'"/>';
     if(d.phase==='figura' && mode==='edit'){ s+='<g fill="none" stroke="var(--ink)" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">'+d.fig.map(function(st){ return '<polyline points="'+st.map(function(q){ return q.join(','); }).join(' ')+'"/>'; }).join('')+'</g><g id="live"></g>'; return s+'</svg>'; }
     var cx=0, cy=0; d.pts.forEach(function(p){ cx+=p[0]; cy+=p[1]; }); cx/=n||1; cy/=n||1;
@@ -9498,8 +9697,9 @@ var T=TOOLS.puntini={
   check:function(ctx){ var d=ctx.d, n=d.pts.length, close=[], lim=d.big?40:28;
     if(d.phase==='figura') return d.fig.length ? infoMsg('Figura con '+d.fig.length+' tratti.','Passa a 2. Metti i puntini.') : infoMsg('Disegna prima la figura.','');
     if(n<3) return infoMsg('Servono almeno 3 punti.','');
-    for(var i=0;i<n;i++) for(var j=i+2;j<n;j++){ if(i===0 && j===n-1) continue; if(Math.hypot(d.pts[i][0]-d.pts[j][0],d.pts[i][1]-d.pts[j][1])<lim) close.push((i+1)+' e '+(j+1)); }
-    var age = n<=15?'adatto ai più piccoli':n<=50?'adatto a ragazzi e adulti':n<=120?'impegnativo':'una vera sfida, per chi ha vista e mano sicure';
+    var ends={}; (d.closes||[]).forEach(function(s0){ var e0=n; d.breaks.forEach(function(b){ if(b>s0 && b<e0) e0=b; }); ends[s0]=e0-1; });
+    for(var i=0;i<n;i++) for(var j=i+2;j<n;j++){ if(i===0 && j===n-1) continue; if(ends[i]===j) continue; if(Math.hypot(d.pts[i][0]-d.pts[j][0],d.pts[i][1]-d.pts[j][1])<lim) close.push((i+1)+' e '+(j+1)); }
+    var age = n<=15?'adatto ai più piccoli':n<=50?'adatto a ragazzi e adulti':n<=120?'impegnativo':n<=300?'una vera sfida, per chi ha vista e mano sicure':'una grande sfida: stampa nitida, meglio su un foglio grande, e vista sicura';
     return (close.length?warnMsg('Alcuni numeri sono molto vicini.','Punti: '+close.slice(0,6).join(', ')+(close.length>6?' e altri':'')+'. Spostali un po’ o usa meno puntini.'):okMsg('I punti sono ben distanziati.',''))+infoMsg(n+' punti, '+(d.breaks.length+1)+(d.breaks.length?' parti':' parte')+'.',age+'.'); },
   solution:function(ctx){ return T.svg(ctx,'sol'); }
 };
@@ -9619,6 +9819,12 @@ var ColoraView=(function(){
   function sources(short, where){ var copia=where==='copia';
     var open=copia ? 'In Crea → Copia con la griglia scegli «Disegno con la griglia» e premi <b>«Scegli l’immagine»</b>' : 'In Crea → Colorare con i numeri premi <b>«Scegli l’immagine»</b>';
     var made=copia ? 'L’app la divide in quadretti, accanto a una griglia vuota.' : 'L’app la trasforma da sola in zone con i numeri.';
+    if(where==='puntini') return '<div class="howto"><ol>'+
+      '<li><b>Apri un museo</b> (si apre in una pagina nuova):'+museums()+'</li>'+
+      '<li><b>Cerca un disegno, un’incisione o una sagoma</b> segnati «Open Access» o «Public domain». I siti sono in inglese: cerca per esempio '+WORDS_COPIA+'. Al Metropolitan puoi anche scegliere, tra i filtri, «Drawings» (disegni) o «Prints» (stampe).</li>'+
+      '<li><b>Scaricalo</b> con il pulsante «Download»; se ti chiede il formato, scegli JPG.</li>'+
+      '<li><b>Torna qui</b>, premi «Metti una foto sotto», scegli l’immagine e poi «Ricava il contorno dall’immagine».<br><button type="button" class="btn primary" data-pick="f-photo">Scegli l’immagine</button></li></ol>'+
+      '<p class="evidence">Vengono meglio un soggetto solo, contorni netti e fondo chiaro: un animale, un fiore, un oggetto, una testa di profilo. I dipinti pieni di sfumature danno contorni confusi: in quel caso ritocca a mano o scegli un’altra opera.</p>'+RIGHTS+'</div>';
     if(short && copia) return '<div class="howto"><ol>'+
       '<li><b>Apri un museo</b> (si apre in una pagina nuova):'+museums()+'</li>'+
       '<li><b>Cerca un disegno o un’incisione</b> segnati «Open Access» o «Public domain». I siti sono in inglese: cerca per esempio '+WORDS_COPIA+'. Al Metropolitan puoi anche scegliere, tra i filtri, «Drawings» (disegni) o «Prints» (stampe).</li>'+
@@ -10072,7 +10278,7 @@ function MJ(f, blocked){ var W=60, Hh=80, s='<svg viewBox="0 0 '+(3*W+20)+' '+(H
 RULES.mandala={ scopo:'Disegnare un mandala: un disegno circolare che si ripete uguale tutto intorno.', regole:['Disegni in uno spicchio solo: l\u2019app ripete il tuo tratto in tutti gli altri spicchi.','Con lo specchio il disegno si riflette anche a metà spicchio, come in un caleidoscopio.','Non ci sono errori: ogni tratto diventa parte del disegno. Annulla toglie l\u2019ultimo.'], passi:[], crea:['Scegli quanti spicchi (da 4 a 32), disegna, poi stampa per colorare o regalare.'] };
 RULES.motivi={ scopo:'Riempire dei riquadri con motivi semplici ripetuti, un tratto alla volta, con calma.', regole:['Scegli un motivo dalla galleria e guardane i tre passaggi.','Ripetilo dentro un riquadro, senza fretta. Non esiste la gomma e non esistono errori.','Con Ricalca il motivo appare a matita leggera e lo puoi ripassare.'], passi:[], crea:['Scegli quanti riquadri, traccia se vuoi le linee a matita che dividono in zone, poi riempi ogni zona con un motivo diverso.'] };
 RULES.differenze={ scopo:'Trovare tutte le differenze tra due scene quasi uguali.', regole:['Guarda la scena di sinistra e quella di destra.','Quando trovi un particolare diverso (un oggetto in più o in meno, spostato, più grande, di un altro colore) cerchialo.','Il numero delle differenze di solito è scritto sotto il gioco.'], passi:[], crea:['Componi la scena con la raccolta di disegni o parti da una tua foto.','Passa a Modifica la copia e cambia da 5 a 10 particolari.'] };
-RULES.puntini={ scopo:'Unire i punti in ordine per scoprire il disegno.', regole:['Parti dal punto 1 e traccia una linea fino al 2, poi al 3, e così via.','Dove un numero ha la stellina, alza la matita e ricomincia da lì.','Alla fine di una parte chiusa torna al suo primo numero.'], passi:[], crea:['Disegna la figura (anche ricalcando una foto), poi scegli quanti puntini: l\u2019app li mette lungo il contorno e li numera.'] };
+RULES.puntini={ scopo:'Unire i punti in ordine per scoprire il disegno.', regole:['Parti dal punto 1 e traccia una linea fino al 2, poi al 3, e così via.','Dove un numero ha la stellina, alza la matita e ricomincia da lì.','Alla fine di una parte chiusa torna al suo primo numero.'], passi:[], crea:['Disegna la figura (anche ricalcando una foto), oppure metti sotto una foto, un disegno o un\u2019opera libera da diritti e premi \u00abRicava il contorno dall\u2019immagine\u00bb.','Poi scegli quanti puntini: l\u2019app li mette lungo il contorno e li numera.'] };
 RULES.tangram={ scopo:'Ricomporre una sagoma usando tutti e sette i pezzi.', regole:['I sette pezzi (due triangoli grandi, uno medio, due piccoli, un quadrato e un parallelogramma) vanno usati tutti.','I pezzi si toccano ma non si sovrappongono.','Si possono girare e capovolgere.'], passi:[], crea:['Sposta, ruota e capovolgi i pezzi per comporre una figura; alla stampa diventa una sagoma nera da ricomporre.'] };
 RULES.cruciverba={ scopo:'Scrivere le parole giuste leggendo le definizioni.', regole:['Ogni numero corrisponde a una definizione orizzontale o verticale.','Le parole si incrociano: una lettera trovata aiuta con l\u2019altra parola.'], passi:[], crea:['Scrivi una parola per riga con trattino e definizione: l\u2019app trova come incastrarle.'] };
 RULES.anagrammi={ scopo:'Riordinare le lettere per trovare la parola; rispondere agli indovinelli.', regole:['Le lettere di ogni anagramma sono quelle della parola, mescolate.','Il piccolo aiuto sotto le lettere suggerisce di che cosa si tratta.'], passi:[], crea:['Scrivi le parole con un aiuto e gli indovinelli con la risposta; il dizionario ti avverte se le stesse lettere formano un\u2019altra parola.'] };
@@ -11644,7 +11850,7 @@ var Percorso=(function(){
     h+='<section class="panel"><h2>Enigmi celebri</h2><p>I sette ponti di Königsberg, le tre porte, il sudoku con 17 indizi, il messaggio di Zodiac: rompicapi famosi <b>risolti e spiegati</b>, e problemi <b>ancora aperti</b> che forse qualcuno risolverà.</p><a class="btn" href="#enigmi">Scopri gli enigmi celebri</a></section>';
     h+='<section class="panel"><h2>Sfide per chi vuole di più</h2><p>Problemi aperti di costruzione: togli più indizi che puoi da un sudoku, un binario o un Futoshiki, lasciando una sola soluzione. L’app controlla a ogni mossa e tiene il tuo record. Per il sudoku 9×9 il minimo è 17: arrivarci è un’impresa.</p><a class="btn" href="#sfide">Prova le sfide</a></section>';
     h+='<section class="panel"><h2>Altri strumenti per creare</h2><p>Mandala, disegni da colorare, trova le differenze, cruciverba con le tue definizioni, rebus, giochi di squadra e <b>Crea un libretto</b> per stampare e regalare una raccolta di giochi: li trovi in <a href="#crea">Crea</a>.</p></section>'+
-      '<p class="note">Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). Giocogonia versione 3.54.</p>';
+      '<p class="note">Nessun gioco è una cura: può accompagnare, non sostituire, l’aiuto di un professionista. I tuoi lavori restano su questo dispositivo e non vengono inviati a nessuno. Il dizionario italiano viene dalle «Liste di parole italiane» di Francesco Napoletano (licenza MIT). Giocogonia versione 3.55.</p>';
     app.innerHTML=h; }
 
   // un solo riquadro che spiega tutti i modi di portare fuori un gioco, sopra i pulsanti Condividi e Stampa
@@ -12075,7 +12281,7 @@ TOOLS.copia.ok=function(d){ var n=d.n; if(typeof n!=='number' || n%1 || n<2 || n
     return Math.abs(Math.floor(a/n)-Math.floor(b/n))<=1 && Math.abs(a%n-b%n)<=1; }); };
 try{ [['puntini',['fig','pts','breaks']],['penta',['region']]].forEach(function(x){ var F=LIMITI_DATI[x[0]] && LIMITI_DATI[x[0]].__forma; if(!F) return;
   ['crea','link','gioca'].forEach(function(k){ if(F[k] && F[k].p) x[1].forEach(function(f){ if(F[k].p[f]) F[k].p[f].l=0; }); }); }); }catch(e){}
-/* Accesso per le verifiche automatiche (anche indipendenti): espone i generatori e i motori, senza cambiare nulla nell'app */
+try{ var LP=LIMITI_DATI.puntini; if(LP){ if(LP.n) LP.n.max=500; if(LP.breaks) LP.breaks.max=499; if(LP.closes) LP.closes.max=499; } }catch(e){} /* 3.55: Unisci i puntini fino a 500 punti */ /* Accesso per le verifiche automatiche (anche indipendenti): espone i generatori e i motori, senza cambiare nulla nell'app */
 window.AM={ GEN:GEN, TOOLS:TOOLS, G_LEVELS:G_LEVELS, WG:WG, Dict:Dict, cores:{ SudokuX:SudokuX, GridCore:GridCore, KakuroCore:KakuroCore, HashiCore:HashiCore, LogicCore:LogicCore, MahjongCore:MahjongCore, NonoCore:NonoCore, FillCore:FillCore, IncastroCore:IncastroCore, CodeCore:CodeCore, Chess:Chess, PentaCore:PentaCore, Tangram2:Tangram2 } };
 try{ AM.Share=Share; AM.GameFile=GameFile; AM.Ricevuti=Ricevuti; AM.cores.ColoraCore=ColoraCore; AM.LIMITI=LIMITI_DATI; }catch(e){}
 try{ Object.defineProperty(window.AM, 'state', { get:function(){ return state; } }); }catch(e){}

@@ -4,14 +4,24 @@
 
 App web gratuita che accompagna il libro e il corso. Funziona su telefono, tablet e computer, si può installare come un'icona e lavora anche senza connessione. Nessun account, nessun dato inviato: tutto resta sul dispositivo (dalla 3.34 anche i caratteri sono dentro la pagina, senza richieste a servizi esterni).
 
-## Che cosa contiene questa cartella (versione 3.54)
-- `index.html` – l'app completa (versione 3.54, 28 novembre 2026)
-- `sw.js` – funzionamento senza connessione (cache giocogonia-v74; dizionario in una cache separata)
-- `VERIFICA-3.54.md` – il collaudo di questa versione (quelli della 3.52 e 3.53 sono nello zip delle prove)
+## Che cosa contiene questa cartella (versione 3.55)
+- `index.html` – l'app completa (versione 3.55, 28 novembre 2026)
+- `sw.js` – funzionamento senza connessione (cache giocogonia-v75; dizionario in una cache separata)
+- `VERIFICA-3.55.md` – il collaudo di questa versione (quelli delle versioni 3.52–3.54 sono negli zip delle prove)
 - `manifest.webmanifest`, `icon.svg` – installazione come app
 - `dizionario/` – parole italiane per i giochi di parole, con la licenza
 
 Nota del 24 novembre 2026: la 3.52 parte dalla copia della 3.51 pubblicata su claude.ai il 19 novembre. Il dizionario è identico a quella copia (impronte SHA-256 controllate); `index.html` è quella copia con le sole correzioni della 3.52, applicate dallo script `patch352.py` (nello zip delle prove). `sw.js` è stato riscritto seguendo le note di lavoro della 3.44–3.51, perché il file originale della 3.51 non è stato ritrovato. I sorgenti separati (src/, tools/, tests/) e i file VERIFICA-3.30…3.51 non sono stati ritrovati.
+
+## Versione 3.55 (28 novembre 2026)
+- **Unisci i puntini: figura automatica da un'immagine.** Con una foto, un disegno o un'opera d'arte libera da diritti messa sotto il foglio, il pulsante «Ricava il contorno dall'immagine» lavora in due modi:
+  - **«Le linee del disegno, punti sugli angoli»** (nuovo, consigliato per disegni, incisioni e opere): segue le linee dell'immagine e mette i puntini dove la linea cambia direzione, come nei libri di unisci i puntini; dove la linea è dritta ne bastano pochi. Si sceglie il tipo di immagine (disegno o incisione; foto o dipinto) e il dettaglio;
+  - **«Il contorno delle sagome»**: segue i bordi delle parti scure (o chiare, con la casella apposita).
+  Tre livelli di dettaglio, un cursore per spostare il confine fra chiaro e scuro. L'app propone quanti puntini usare e, nel modo a linee, toglie i punti che finirebbero troppo vicini a un altro numero. La casella «Punti sugli angoli» si può accendere e spegnere anche per le figure disegnate a mano. Tutto avviene sul dispositivo.
+- «Controlla» non segnala più come «troppo vicini» il primo e l'ultimo punto di una parte chiusa: sono uniti da una linea.
+- Nello strumento ci sono i passi per prendere un'opera dai musei con raccolte libere (gli stessi di Colorare con i numeri).
+- Fino a 500 puntini (prima 300), con numeri più piccoli oltre i 300; i file e i link ricevuti accettano i nuovi limiti.
+- Verifica in `VERIFICA-3.55.md`.
 
 ## Versione 3.54 (28 novembre 2026)
 - **Italiano:** nel Percorso dei numeri la regola 4 usava il condizionale dopo «se» («se il dado ti porterebbe…»): ora è «se il dado ti portasse oltre l'ultima casella, ti fermeresti sull'ultima». Stesso errore corretto nell'aiuto del Sudoku («toglie un simbolo solo se la soluzione resta unica»).
@@ -268,7 +278,7 @@ Sedici strumenti, uno per ogni gioco del corso. In ognuno: Controlla, Annulla e 
 
 ## Come pubblicarla su GitHub Pages
 Attenzione: se si rinomina il repository `attivamente`, GitHub **non** reindirizza il vecchio indirizzo della pagina, e i QR e i link già diffusi smetterebbero di funzionare. Per questo:
-1. **Crea un nuovo repository pubblico** chiamato `giocogonia` e carica tutti i file di questa cartella, compresa la cartella `dizionario` (index.html, sw.js, manifest.webmanifest, icon.svg, LEGGIMI.md, VERIFICA-3.54.md, dizionario/).
+1. **Crea un nuovo repository pubblico** chiamato `giocogonia` e carica tutti i file di questa cartella, compresa la cartella `dizionario` (index.html, sw.js, manifest.webmanifest, icon.svg, LEGGIMI.md, VERIFICA-3.55.md, dizionario/).
 2. In Settings → Pages scegli "Deploy from a branch", ramo `main`, cartella `/ (root)`, e salva. Dopo un paio di minuti l'app è online a `https://NOMEUTENTE.github.io/giocogonia/`.
 3. **Nel vecchio repository `attivamente`** cancella i file dell'app e carica solo i due file della cartella `vecchio-indirizzo` (index.html e sw.js). Chi apre il vecchio indirizzo, o un vecchio link di gioco, viene portato alla nuova app; le copie salvate della vecchia app vengono cancellate dai dispositivi, quelle di Giocogonia no.
 4. Crea il nuovo QR code dall'indirizzo `https://NOMEUTENTE.github.io/giocogonia/`.

@@ -1,4 +1,4 @@
-// Giocogonia 3.54 – funzionamento senza connessione.
+// Giocogonia 3.55 – funzionamento senza connessione.
 // - La pagina dell'app si chiede sempre prima alla rete (dopo un aggiornamento si vede subito la versione nuova);
 //   la copia salvata si usa solo senza connessione.
 // - Il dizionario si salva già all'installazione, in una cache separata, così i giochi di parole funzionano offline.
@@ -6,8 +6,8 @@
 // - Questo service worker non tocca la versione inglese in /en/ né le sue cache.
 // 3.53: nomi delle cache con il prefisso del nuovo nome. Il vecchio indirizzo (/attivamente/) è sullo stesso sito
 // (igulla75.github.io), e le cache di un sito sono in comune: ognuna delle due app tocca solo le cache con il suo prefisso.
-// 3.54: correzioni di testo e stile delle schede in Crea; nuova cache perché i telefoni scarichino la versione nuova.
-const CACHE = 'giocogonia-v74';
+// 3.55: contorno automatico in Unisci i puntini; nuova cache perché i telefoni scarichino la versione nuova.
+const CACHE = 'giocogonia-v75';
 const DIZ = 'giocogonia-diz-v1';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 const DIZ_FILES = ['./dizionario/comuni.txt', './dizionario/rare.txt'];
